@@ -2,6 +2,7 @@ mod array;
 mod data;
 mod number;
 mod object;
+mod parser;
 mod string;
 mod tokenizer;
 mod value;
@@ -14,6 +15,7 @@ pub use self::{
     array::JsonArray,
     number::JsonNumber,
     object::JsonObject,
+    parser::JsonParsingError,
     string::JsonString,
     value::{JsonValue, JsonValueType},
 };

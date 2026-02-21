@@ -1,78 +1,63 @@
-use alloc::{boxed::Box, rc::Rc, string::String, sync::Arc};
-use core::iter::Peekable;
+use alloc::{boxed::Box, rc::Rc, sync::Arc};
+use core::{error::Error, fmt::Display};
 
-use crate::json::{JsonDocument, data::JsonData};
+use crate::json::{
+    JsonDocument,
+    data::JsonData,
+    tokenizer::{JsonTokenizer, TokenizerError},
+};
 
 impl JsonDocument<Box<JsonData>> {
-    pub fn parse(contents: &str) -> Self {
-        Self {
-            data: Box::new(
-                JsonParser {
-                    iterator: contents.chars().peekable(),
-                    column: 0,
-                    line: 1,
-                    buffer: String::with_capacity(16),
-                }
-                .parse(),
-            ),
-        }
+    pub fn parse(contents: &str) -> Result<Self, JsonParsingError> {
+        let tokens = JsonTokenizer::new(contents.chars()).tokenize()?;
+        Ok(Self {
+            data: Box::new(JsonData::default()),
+        })
     }
 }
 
 impl JsonDocument<Rc<JsonData>> {
-    pub fn parse(contents: &str) -> Self {
-        Self {
-            data: Rc::new(
-                JsonParser {
-                    iterator: contents.chars().peekable(),
-                    column: 0,
-                    line: 1,
-                    buffer: String::with_capacity(16),
-                }
-                .parse(),
-            ),
-        }
+    pub fn parse(contents: &str) -> Result<Self, JsonParsingError> {
+        let tokens = JsonTokenizer::new(contents.chars()).tokenize()?;
+        Ok(Self {
+            data: Rc::new(JsonData::default()),
+        })
     }
 }
 
 impl JsonDocument<Arc<JsonData>> {
-    pub fn parse(contents: &str) -> Self {
-        Self {
-            data: Arc::new(
-                JsonParser {
-                    iterator: contents.chars().peekable(),
-                    column: 0,
-                    line: 1,
-                    buffer: String::with_capacity(16),
-                }
-                .parse(),
-            ),
+    pub fn parse(contents: &str) -> Result<Self, JsonParsingError> {
+        let tokens = JsonTokenizer::new(contents.chars()).tokenize()?;
+        Ok(Self {
+            data: Arc::new(JsonData::default()),
+        })
+    }
+}
+
+// struct JsonParser<T: Iterator<Item = char>> {}
+
+/// A failure on the parsing of a JSON
+#[derive(Debug)]
+pub enum JsonParsingError {
+    Tokenizer(TokenizerError),
+}
+
+impl From<TokenizerError> for JsonParsingError {
+    fn from(value: TokenizerError) -> Self {
+        Self::Tokenizer(value)
+    }
+}
+
+impl Display for JsonParsingError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        writeln!(f, "Failed to parse JSON.")?;
+        writeln!(f)?;
+        match self {
+            JsonParsingError::Tokenizer(tokenizer_error) => {
+                write!(f, "{tokenizer_error}")
+            }
         }
     }
 }
 
-struct JsonParser<T: Iterator<Item = char>> {}
-
-struct JsonParserCharProcessing {
-    char_decision: CharDecision,
-}
-
-/// What should be done to the current character
-enum CharDecision {
-    /// Keep in the iterator
-    Keep,
-    /// Ignore, this will pop the char from the iterator but not include on buffer
-    Ignore,
-    /// Include on the buffer
-    Include,
-}
-
-pub enum JsonParsingError {}
-
-impl<T: Iterator<Item = char>> JsonParser<T> {
-    pub fn parse(&mut self) -> JsonData {
-        todo!()
-    }
-}
-
-fn start() {}
+impl Error for JsonParsingError {}

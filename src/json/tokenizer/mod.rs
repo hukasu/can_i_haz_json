@@ -4,7 +4,7 @@ mod error;
 #[cfg(test)]
 mod tests;
 
-use alloc::{string::String, vec::Vec};
+use alloc::vec::Vec;
 use core::ops::RangeInclusive;
 
 use crate::json::tokenizer::error::TokenizerErrorType;
@@ -48,8 +48,6 @@ pub struct JsonTokenizer<T: Iterator<Item = char>> {
     column_start: usize,
     line: usize,
     line_start: usize,
-    escaped: u32,
-    buffer: String,
     state: State<T>,
     fused: bool,
 }
@@ -64,8 +62,6 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             column_start: 1,
             line: 1,
             line_start: 1,
-            escaped: 0,
-            buffer: String::with_capacity(16),
             state: Self::start,
             fused: false,
         }
@@ -169,10 +165,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                 self.state = Self::escaped_character;
                 Ok(None)
             }
-            ch @ '\u{0020}'..='\u{10ffff}' => {
-                self.buffer.push(ch);
-                Ok(None)
-            }
+            '\u{0020}'..='\u{10ffff}' => Ok(None),
             _ => self.invalid_character_in_string(),
         };
 
@@ -188,39 +181,12 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
         };
 
         let res = match current_char {
-            ch @ ('"' | '\\' | '/') => {
-                self.buffer.push(ch);
-                self.state = Self::string;
-                Ok(None)
-            }
-            'b' => {
-                self.buffer.push('\u{0008}');
-                self.state = Self::string;
-                Ok(None)
-            }
-            'f' => {
-                self.buffer.push('\u{000c}');
-                self.state = Self::string;
-                Ok(None)
-            }
-            'n' => {
-                self.buffer.push('\u{000a}');
-                self.state = Self::string;
-                Ok(None)
-            }
-            'r' => {
-                self.buffer.push('\u{000d}');
-                self.state = Self::string;
-                Ok(None)
-            }
-            't' => {
-                self.buffer.push('\u{0009}');
+            '"' | '\\' | '/' | 'b' | 'f' | 'n' | 'r' | 't' => {
                 self.state = Self::string;
                 Ok(None)
             }
             'u' => {
                 self.state = Self::hex::<0>;
-                self.escaped = 0;
                 Ok(None)
             }
             _ => self.invalid_escaped_character_in_string(),
@@ -248,21 +214,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
         };
 
         let res = if current_char.is_ascii_hexdigit() {
-            self.escaped <<= 4;
-            let Some(digit) = current_char.to_digit(16) else {
-                unreachable!("Must be a valid hexdigit.");
-            };
-            self.escaped += digit;
-            if N == 3 {
-                if let Some(ch) = char::from_u32(self.escaped) {
-                    self.buffer.push(ch);
-                    Ok(None)
-                } else {
-                    self.invalid_escaped_character_in_string()
-                }
-            } else {
-                Ok(None)
-            }
+            Ok(None)
         } else {
             self.invalid_escaped_character_in_string()
         };

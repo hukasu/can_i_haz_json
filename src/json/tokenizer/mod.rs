@@ -13,7 +13,7 @@ pub use self::error::TokenizerError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token {
-    chars: RangeInclusive<usize>,
+    bytes: RangeInclusive<usize>,
     lines: RangeInclusive<usize>,
     column_start: usize,
     column_end: usize,
@@ -42,8 +42,8 @@ type State<T: Iterator<Item = char>> =
 
 pub struct JsonTokenizer<T: Iterator<Item = char>> {
     iterator: T,
-    r#char: usize,
-    char_start: usize,
+    byte: usize,
+    byte_start: usize,
     column: usize,
     column_start: usize,
     line: usize,
@@ -56,8 +56,8 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     pub fn new(iterator: T) -> Self {
         Self {
             iterator,
-            char: 0,
-            char_start: 0,
+            byte: 0,
+            byte_start: 0,
             column: 1,
             column_start: 1,
             line: 1,
@@ -88,49 +88,49 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                 Ok(None)
             }
             '{' => Ok(Some(Token {
-                chars: self.char..=self.char,
+                bytes: self.byte..=self.byte,
                 lines: self.line..=self.line,
                 column_start: self.column,
                 column_end: self.column + 1,
                 token_type: TokenType::LCurly,
             })),
             '}' => Ok(Some(Token {
-                chars: self.char..=self.char,
+                bytes: self.byte..=self.byte,
                 lines: self.line..=self.line,
                 column_start: self.column,
                 column_end: self.column + 1,
                 token_type: TokenType::RCurly,
             })),
             '[' => Ok(Some(Token {
-                chars: self.char..=self.char,
+                bytes: self.byte..=self.byte,
                 lines: self.line..=self.line,
                 column_start: self.column,
                 column_end: self.column + 1,
                 token_type: TokenType::LBracket,
             })),
             ']' => Ok(Some(Token {
-                chars: self.char..=self.char,
+                bytes: self.byte..=self.byte,
                 lines: self.line..=self.line,
                 column_start: self.column,
                 column_end: self.column + 1,
                 token_type: TokenType::RBracket,
             })),
             ',' => Ok(Some(Token {
-                chars: self.char..=self.char,
+                bytes: self.byte..=self.byte,
                 lines: self.line..=self.line,
                 column_start: self.column,
                 column_end: self.column + 1,
                 token_type: TokenType::Comma,
             })),
             ':' => Ok(Some(Token {
-                chars: self.char..=self.char,
+                bytes: self.byte..=self.byte,
                 lines: self.line..=self.line,
                 column_start: self.column,
                 column_end: self.column + 1,
                 token_type: TokenType::Colon,
             })),
             '"' => {
-                self.char_start = self.char;
+                self.byte_start = self.byte;
                 self.column_start = self.column + 1;
                 self.line_start = self.line;
                 self.state = Self::string;
@@ -139,7 +139,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             _ => self.invalid_token(),
         };
 
-        self.char += 1;
+        self.byte += current_char.len_utf8();
         self.column += 1;
 
         res
@@ -154,7 +154,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             '"' => {
                 self.state = Self::start;
                 Ok(Some(Token {
-                    chars: self.char_start..=self.char,
+                    bytes: self.byte_start..=self.byte,
                     lines: self.line_start..=self.line,
                     column_start: self.column_start,
                     column_end: self.column,
@@ -169,7 +169,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             _ => self.invalid_character_in_string(),
         };
 
-        self.char += 1;
+        self.byte += current_char.len_utf8();
         self.column += 1;
 
         res
@@ -192,7 +192,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             _ => self.invalid_escaped_character_in_string(),
         };
 
-        self.char += 1;
+        self.byte += current_char.len_utf8();
         self.column += 1;
 
         res
@@ -219,7 +219,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             self.invalid_escaped_character_in_string()
         };
 
-        self.char += 1;
+        self.byte += current_char.len_utf8();
         self.column += 1;
 
         res
@@ -228,7 +228,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn eof(&self) -> Result<Option<Token>, TokenizerError> {
         Ok(Some(Token {
-            chars: self.char..=self.char,
+            bytes: self.byte..=self.byte,
             lines: self.line..=self.line,
             column_start: self.column,
             column_end: self.column + 1,
@@ -239,7 +239,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn unexpected_eof(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            chars: self.char..=self.char,
+            chars: self.byte..=self.byte,
             lines: self.line..=self.line,
             column_start: self.column,
             column_end: self.column + 1,
@@ -250,7 +250,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn unmatched_curly(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            chars: self.char..=self.char,
+            chars: self.byte..=self.byte,
             lines: self.line..=self.line,
             column_start: self.column,
             column_end: self.column + 1,
@@ -261,7 +261,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn unmatched_bracket(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            chars: self.char..=self.char,
+            chars: self.byte..=self.byte,
             lines: self.line..=self.line,
             column_start: self.column,
             column_end: self.column + 1,
@@ -271,7 +271,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn invalid_token(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            chars: self.char..=self.char,
+            chars: self.byte..=self.byte,
             lines: self.line..=self.line,
             column_start: self.column,
             column_end: self.column + 1,
@@ -282,7 +282,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn invalid_character_in_string(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            chars: self.char..=self.char,
+            chars: self.byte..=self.byte,
             lines: self.line..=self.line,
             column_start: self.column,
             column_end: self.column + 1,
@@ -293,7 +293,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn invalid_escaped_character_in_string(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            chars: self.char..=self.char,
+            chars: self.byte..=self.byte,
             lines: self.line..=self.line,
             column_start: self.column,
             column_end: self.column + 1,

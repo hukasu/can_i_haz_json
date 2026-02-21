@@ -239,7 +239,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn unexpected_eof(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            chars: self.byte..=self.byte,
+            bytes: self.byte..=self.byte,
             lines: self.line..=self.line,
             column_start: self.column,
             column_end: self.column + 1,
@@ -250,7 +250,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn unmatched_curly(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            chars: self.byte..=self.byte,
+            bytes: self.byte..=self.byte,
             lines: self.line..=self.line,
             column_start: self.column,
             column_end: self.column + 1,
@@ -261,7 +261,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn unmatched_bracket(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            chars: self.byte..=self.byte,
+            bytes: self.byte..=self.byte,
             lines: self.line..=self.line,
             column_start: self.column,
             column_end: self.column + 1,
@@ -271,7 +271,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn invalid_token(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            chars: self.byte..=self.byte,
+            bytes: self.byte..=self.byte,
             lines: self.line..=self.line,
             column_start: self.column,
             column_end: self.column + 1,
@@ -282,7 +282,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn invalid_character_in_string(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            chars: self.byte..=self.byte,
+            bytes: self.byte..=self.byte,
             lines: self.line..=self.line,
             column_start: self.column,
             column_end: self.column + 1,
@@ -293,7 +293,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn invalid_escaped_character_in_string(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            chars: self.byte..=self.byte,
+            bytes: self.byte..=self.byte,
             lines: self.line..=self.line,
             column_start: self.column,
             column_end: self.column + 1,

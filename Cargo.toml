@@ -7,4 +7,4 @@ edition = "2024"
 log = "0.4"
 
 [dev-dependencies]
-can_i_haz_gltf_test_macro = { path = "macros" }
+can_i_haz_gltf_test_macro = { path = "test_macros" }

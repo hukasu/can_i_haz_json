@@ -6,8 +6,13 @@ version = 4
 name = "can_i_haz_gltf"
 version = "0.1.0"
 dependencies = [
+ "can_i_haz_gltf_test_macro",
  "log",
 ]
+
+[[package]]
+name = "can_i_haz_gltf_test_macro"
+version = "0.1.0"
 
 [[package]]
 name = "log"

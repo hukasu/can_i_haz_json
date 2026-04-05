@@ -45,7 +45,7 @@ pub fn make_test_suite(token_stream: TokenStream) -> TokenStream {
 fn {}() {{
     let test_path = "{}";
     let contents = std::fs::read(test_path).unwrap();
-    can_i_haz_gltf::json::JsonDocument::new(contents.as_slice()).unwrap();
+    ::can_i_haz_gltf::json::JsonDocument::new(contents.as_slice()).unwrap();
 }}
 "#,
                         file_name
@@ -121,7 +121,7 @@ pub fn make_gltf_tests(token_stream: TokenStream) -> TokenStream {
 fn {}_{}() {{
     let test_path = "{}";
     let contents = std::fs::read(test_path).unwrap();
-    Gltf::new(contents.into_boxed_slice()).unwrap();
+    ::can_i_haz_gltf::Gltf::new(contents.into_boxed_slice()).unwrap();
 }}
 "#,
                         name.replace("2", "Two")

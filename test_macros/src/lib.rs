@@ -44,10 +44,8 @@ pub fn make_test_suite(token_stream: TokenStream) -> TokenStream {
 #[test]
 fn {}() {{
     let test_path = "{}";
-    let data = std::fs::read(test_path).unwrap();
-    let contents = String::from_utf8_lossy(data.as_slice());
-    
-    BoxJsonDocument::parse(&contents).unwrap();
+    let contents = std::fs::read(test_path).unwrap();
+    can_i_haz_gltf::json::JsonDocument::new(contents.as_slice()).unwrap();
 }}
 "#,
                         file_name

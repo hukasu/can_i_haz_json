@@ -7,10 +7,8 @@ mod string;
 mod tokenizer;
 mod value;
 
-use alloc::{borrow::Cow, boxed::Box, rc::Rc, sync::Arc};
-use core::{error::Error, fmt::Display, ops::Deref};
+use core::{borrow::Borrow, error::Error, fmt::Display, ops::Deref, slice::SliceIndex};
 
-use self::data::JsonData;
 pub use self::{
     array::JsonArray,
     number::JsonNumber,
@@ -20,45 +18,37 @@ pub use self::{
     value::{JsonValue, JsonValueType},
 };
 
-pub struct JsonDocument<C: Deref<Target = JsonData>> {
-    data: C,
+#[derive(Clone, PartialEq, Eq)]
+pub struct JsonDocument<T: Borrow<[u8]> + Clone> {
+    contents: T,
 }
 
-pub type BoxJsonDocument = JsonDocument<Box<JsonData>>;
-pub type RcJsonDocument = JsonDocument<Rc<JsonData>>;
-pub type ArcJsonDocument = JsonDocument<Arc<JsonData>>;
+impl<T: Borrow<[u8]> + Clone> JsonDocument<T> {
+    /// Build a [`JsonDocument`] from the entire contents.
+    pub fn new(contents: T) -> Result<Self, JsonError> {
+        Ok(Self { contents })
+    }
 
-impl<C: Clone + Deref<Target = JsonData>> Clone for JsonDocument<C> {
-    fn clone(&self) -> Self {
-        Self {
-            data: self.data.clone(),
-        }
+    pub fn new_from_range(contents: T, _range: impl SliceIndex<[u8]>) -> Result<Self, JsonError> {
+        Ok(Self { contents })
     }
 }
 
-impl<C: Default + Deref<Target = JsonData>> Default for JsonDocument<C> {
-    fn default() -> Self {
-        Self {
-            data: Default::default(),
-        }
+impl<T: Borrow<[u8]> + Clone> Deref for JsonDocument<T> {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        self.contents.borrow()
     }
 }
 
 #[derive(Debug)]
-pub struct WrongType<'a> {
-    key: Cow<'a, str>,
-    wrong: JsonValueType,
-    correct: JsonValueType,
-}
+pub enum JsonError {}
 
-impl Display for WrongType<'_> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(
-            f,
-            "Tried to retrieve {} as {:?}, but it is {:?}.",
-            self.key, self.wrong, self.correct
-        )
+impl Display for JsonError {
+    fn fmt(&self, _f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        Ok(())
     }
 }
 
-impl Error for WrongType<'_> {}
+impl Error for JsonError {}

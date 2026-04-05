@@ -1,38 +1,6 @@
-use alloc::{boxed::Box, rc::Rc, sync::Arc};
 use core::{error::Error, fmt::Display};
 
-use crate::json::{
-    JsonDocument,
-    data::JsonData,
-    tokenizer::{JsonTokenizer, TokenizerError},
-};
-
-impl JsonDocument<Box<JsonData>> {
-    pub fn parse(contents: &str) -> Result<Self, JsonParsingError> {
-        let tokens = JsonTokenizer::new(contents.chars()).tokenize()?;
-        Ok(Self {
-            data: Box::new(JsonData::default()),
-        })
-    }
-}
-
-impl JsonDocument<Rc<JsonData>> {
-    pub fn parse(contents: &str) -> Result<Self, JsonParsingError> {
-        let tokens = JsonTokenizer::new(contents.chars()).tokenize()?;
-        Ok(Self {
-            data: Rc::new(JsonData::default()),
-        })
-    }
-}
-
-impl JsonDocument<Arc<JsonData>> {
-    pub fn parse(contents: &str) -> Result<Self, JsonParsingError> {
-        let tokens = JsonTokenizer::new(contents.chars()).tokenize()?;
-        Ok(Self {
-            data: Arc::new(JsonData::default()),
-        })
-    }
-}
+use crate::json::tokenizer::TokenizerError;
 
 // struct JsonParser<T: Iterator<Item = char>> {}
 

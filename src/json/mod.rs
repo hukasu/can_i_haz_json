@@ -9,6 +9,10 @@ mod value;
 
 use core::{borrow::Borrow, error::Error, fmt::Display, ops::Deref, slice::SliceIndex};
 
+use alloc::{string::String, vec::Vec};
+
+use crate::json::tokenizer::{JsonTokenizer, TokenizerError};
+
 pub use self::{
     array::JsonArray,
     number::JsonNumber,
@@ -26,10 +30,23 @@ pub struct JsonDocument<T: Borrow<[u8]> + Clone> {
 impl<T: Borrow<[u8]> + Clone> JsonDocument<T> {
     /// Build a [`JsonDocument`] from the entire contents.
     pub fn new(contents: T) -> Result<Self, JsonError> {
+        let data = contents.borrow();
+
+        let tokens = JsonTokenizer::new(String::from_utf8_lossy(data).chars())
+            .collect::<Result<Vec<_>, TokenizerError>>()?;
+
         Ok(Self { contents })
     }
 
-    pub fn new_from_range(contents: T, _range: impl SliceIndex<[u8]>) -> Result<Self, JsonError> {
+    pub fn new_from_range(
+        contents: T,
+        range: impl SliceIndex<[u8], Output = [u8]>,
+    ) -> Result<Self, JsonError> {
+        let data = contents.borrow();
+
+        let tokens = JsonTokenizer::new(String::from_utf8_lossy(&data[range]).chars())
+            .collect::<Result<Vec<_>, TokenizerError>>()?;
+
         Ok(Self { contents })
     }
 }
@@ -43,12 +60,25 @@ impl<T: Borrow<[u8]> + Clone> Deref for JsonDocument<T> {
 }
 
 #[derive(Debug)]
-pub enum JsonError {}
+pub enum JsonError {
+    Tokenizer(TokenizerError),
+}
 
 impl Display for JsonError {
-    fn fmt(&self, _f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        Ok(())
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Tokenizer(tokenizer) => {
+                writeln!(f, "Failed to tokenize Json.")?;
+                write!(f, "{tokenizer}")
+            }
+        }
     }
 }
 
 impl Error for JsonError {}
+
+impl From<TokenizerError> for JsonError {
+    fn from(value: TokenizerError) -> Self {
+        Self::Tokenizer(value)
+    }
+}

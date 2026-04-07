@@ -42,12 +42,18 @@ pub fn make_test_suite(token_stream: TokenStream) -> TokenStream {
                     let test = format!(
                         r#"
 #[test]
+{}
 fn {}() {{
     let test_path = "{}";
     let contents = std::fs::read(test_path).unwrap();
     ::can_i_haz_gltf::json::JsonDocument::new(contents.as_slice()).unwrap();
 }}
 "#,
+                        if file_name.to_string_lossy().starts_with("n_") {
+                            "\n#[should_panic]"
+                        } else {
+                            ""
+                        },
                         file_name
                             .to_string_lossy()
                             .trim_end_matches(".json")

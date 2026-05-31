@@ -46,7 +46,8 @@ pub fn make_test_suite(token_stream: TokenStream) -> TokenStream {
 fn {}() {{
     let test_path = "{}";
     let contents = std::fs::read(test_path).unwrap();
-    ::can_i_haz_gltf::json::JsonDocument::new(contents.as_slice()).unwrap();
+    let slice = contents.as_slice();
+    ::can_i_haz_gltf::json::JsonDocument::new(slice).unwrap();
 }}
 "#,
                         if file_name.to_string_lossy().starts_with("n_") {

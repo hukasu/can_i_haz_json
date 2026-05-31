@@ -14,7 +14,7 @@
 //!
 //! ```rust
 //! # use can_i_haz_gltf::Gltf;
-//! let data: &[u8] = b"{}";
+//! let data: &'static [u8] = b"{}";
 //! let gltf = Gltf::new(data).unwrap();
 //! ```
 //!
@@ -47,16 +47,14 @@
 //! ```
 //!
 //! ## Lifetimes
-//! Since it takes a type that only requires [`Borrow<[u8]>`](core::borrow::Borrow),
-//! it will be tied to lifetime of the object that is given to [`Gltf::new`].
+//! [`Gltf::new`] takes in a owned type bound by ['static], making it impossible to
+//! create a [`Gltf`] from a reference.
 //!
 //! ```rust,compile_fail
 //! # use can_i_haz_gltf::Gltf;
 //! // Fails because `data` does not live long enough.
-//! let gltf = {
-//!     let data: Vec<u8> = b"{}".to_vec();
-//!     Gltf::new(data.as_slice()).unwrap()
-//! };
+//! let data: Vec<u8> = b"{}".to_vec();
+//! let gltf = Gltf::new(data.as_slice()).unwrap();
 //! let _  = gltf.version();
 //! ```
 //!
@@ -64,32 +62,39 @@
 extern crate alloc;
 
 pub mod json;
+pub mod owned_bytes;
 
-use core::{borrow::Borrow, fmt::Display};
+use core::{fmt::Display, ops::Deref};
 
-use crate::json::{JsonDocument, JsonError};
+use crate::{
+    json::{JsonDocument, JsonError},
+    owned_bytes::OwnedBytes,
+};
 
 const GLTF_MAGIC: [u8; 4] = [0x67, 0x6C, 0x54, 0x46];
 const GLTF_JSON_CHUNK_TYPE: u32 = 0x4E4F534A;
 const GLTF_BIN_CHUNK_TYPE: u32 = 0x004E4942;
 
-#[derive(Clone, PartialEq, Eq)]
-pub struct Gltf<T: Borrow<[u8]> + Clone> {
+pub struct Gltf {
     version: u32,
     length: u32,
     json_start: usize,
     json_length: usize,
     binary_start: usize,
     binary_length: usize,
-    json_document: JsonDocument<T>,
+    contents: OwnedBytes,
+    json_document: JsonDocument<&'static [u8]>,
 }
 
-impl<T: Borrow<[u8]> + Clone> Gltf<T> {
-    pub fn new(contents: T) -> Result<Gltf<T>, GltfValidationError> {
-        let contents_borrow = contents.borrow();
-        if contents_borrow[0] == b'{' {
+impl Gltf {
+    pub fn new<T: Deref<Target = [u8]> + 'static>(
+        contents: T,
+    ) -> Result<Self, GltfValidationError> {
+        let contents = OwnedBytes::new(contents);
+
+        if contents[0] == b'{' {
             Self::gltf_new(contents)
-        } else if contents_borrow[..4] != GLTF_MAGIC {
+        } else if contents[..4] != GLTF_MAGIC {
             Err(GltfValidationError::WrongMagic)
         } else {
             Self::glb_new(contents)
@@ -104,32 +109,29 @@ impl<T: Borrow<[u8]> + Clone> Gltf<T> {
         Some(self.version).filter(|version| *version != 0)
     }
 
-    fn gltf_new(contents: T) -> Result<Gltf<T>, GltfValidationError> {
-        let contents_borrow = contents.borrow();
-        let length = contents_borrow.len();
+    fn gltf_new(contents: OwnedBytes) -> Result<Self, GltfValidationError> {
+        let length = contents.len();
         let Ok(length_u32) = u32::try_from(length) else {
             unreachable!("GlTF json should never be larger then 4GB.");
         };
-
-        let json_document = JsonDocument::new(contents)?;
-
-        // TODO take the version from the json
+        let json_document = JsonDocument::new(contents.bytes())?;
 
         Ok(Self {
+            // TODO fetch version from json_document
             version: 0,
             length: length_u32,
             json_start: 0,
             json_length: length,
             binary_start: length,
             binary_length: 0,
+            contents,
             json_document,
         })
     }
 
-    fn glb_new(contents: T) -> Result<Gltf<T>, GltfValidationError> {
-        let contents_borrow = contents.borrow();
-        let version = u32::from_le_bytes(contents_borrow[4..8].try_into().unwrap());
-        let length = u32::from_le_bytes(contents_borrow[8..12].try_into().unwrap());
+    fn glb_new(contents: OwnedBytes) -> Result<Gltf, GltfValidationError> {
+        let version = u32::from_le_bytes(contents[4..8].try_into().unwrap());
+        let length = u32::from_le_bytes(contents[8..12].try_into().unwrap());
 
         if version == 1 {
             Self::glb_1_new(contents, version, length)
@@ -141,8 +143,12 @@ impl<T: Borrow<[u8]> + Clone> Gltf<T> {
     }
 
     /// Implementation of [KHR_binary_glTF](https://github.com/KhronosGroup/glTF/blob/main/extensions/1.0/Khronos/KHR_binary_glTF/README.md)
-    fn glb_1_new(contents: T, version: u32, length: u32) -> Result<Gltf<T>, GltfValidationError> {
-        let contents_borrow = contents.borrow();
+    fn glb_1_new(
+        contents: OwnedBytes,
+        version: u32,
+        length: u32,
+    ) -> Result<Gltf, GltfValidationError> {
+        let contents_borrow = &*contents;
         let Ok(length_usize) = usize::try_from(length) else {
             return Err(GltfValidationError::Unaddressable);
         };
@@ -166,6 +172,11 @@ impl<T: Borrow<[u8]> + Clone> Gltf<T> {
         let binary_start = 20 + json_length;
         let binary_length = length_usize - binary_start;
 
+        let ptr = {
+            let ptr = &*contents as *const [u8];
+            unsafe { ptr.as_ref_unchecked() }
+        };
+
         Ok(Self {
             version,
             length,
@@ -173,12 +184,17 @@ impl<T: Borrow<[u8]> + Clone> Gltf<T> {
             json_length,
             binary_start,
             binary_length,
-            json_document: JsonDocument::new(contents)?,
+            contents,
+            json_document: JsonDocument::new(ptr)?,
         })
     }
 
-    fn glb_2_new(contents: T, version: u32, length: u32) -> Result<Gltf<T>, GltfValidationError> {
-        let contents_borrow = contents.borrow();
+    fn glb_2_new(
+        contents: OwnedBytes,
+        version: u32,
+        length: u32,
+    ) -> Result<Gltf, GltfValidationError> {
+        let contents_borrow = &*contents;
         let Ok(length_usize) = usize::try_from(length) else {
             return Err(GltfValidationError::Unaddressable);
         };
@@ -223,6 +239,11 @@ impl<T: Borrow<[u8]> + Clone> Gltf<T> {
             (binary_chunk_header + 8, binary_length)
         };
 
+        let ptr = {
+            let ptr = &*contents as *const [u8];
+            unsafe { ptr.as_ref_unchecked() }
+        };
+
         Ok(Self {
             version,
             length,
@@ -230,7 +251,8 @@ impl<T: Borrow<[u8]> + Clone> Gltf<T> {
             json_length,
             binary_start,
             binary_length,
-            json_document: JsonDocument::new(contents)?,
+            contents,
+            json_document: JsonDocument::new(ptr)?,
         })
     }
 

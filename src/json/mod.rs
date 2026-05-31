@@ -7,9 +7,9 @@ mod string;
 mod tokenizer;
 mod value;
 
-use core::{borrow::Borrow, error::Error, fmt::Display, ops::Deref, slice::SliceIndex};
+use core::{error::Error, fmt::Display, ops::Deref};
 
-use alloc::{string::String, vec::Vec};
+use alloc::vec::Vec;
 
 use crate::json::tokenizer::{JsonTokenizer, TokenizerError};
 
@@ -23,39 +23,23 @@ pub use self::{
 };
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct JsonDocument<T: Borrow<[u8]> + Clone> {
+pub struct JsonDocument<T: Sized + Deref<Target = str> + Clone> {
     contents: T,
 }
 
-impl<T: Borrow<[u8]> + Clone> JsonDocument<T> {
-    /// Build a [`JsonDocument`] from the entire contents.
-    pub fn new(contents: T) -> Result<Self, JsonError> {
-        let data = contents.borrow();
-
-        let tokens = JsonTokenizer::new(String::from_utf8_lossy(data).chars())
-            .collect::<Result<Vec<_>, TokenizerError>>()?;
-
-        Ok(Self { contents })
-    }
-
-    pub fn new_from_range(
-        contents: T,
-        range: impl SliceIndex<[u8], Output = [u8]>,
-    ) -> Result<Self, JsonError> {
-        let data = contents.borrow();
-
-        let tokens = JsonTokenizer::new(String::from_utf8_lossy(&data[range]).chars())
-            .collect::<Result<Vec<_>, TokenizerError>>()?;
-
-        Ok(Self { contents })
-    }
+impl JsonDocument<&str> {
+    pub const BLANK: Self = JsonDocument { contents: "" };
 }
 
-impl<T: Borrow<[u8]> + Clone> Deref for JsonDocument<T> {
-    type Target = [u8];
+impl<T: Deref<Target = str> + Clone + Unpin> JsonDocument<T> {
+    /// Build a [`JsonDocument`] from the entire contents.
+    pub fn new(contents: T) -> Result<Self, JsonError> {
+        let data = contents.deref();
 
-    fn deref(&self) -> &Self::Target {
-        self.contents.borrow()
+        let tokens =
+            JsonTokenizer::new(data.chars()).collect::<Result<Vec<_>, TokenizerError>>()?;
+
+        Ok(Self { contents })
     }
 }
 

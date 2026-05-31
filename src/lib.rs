@@ -66,6 +66,8 @@ pub mod owned_bytes;
 
 use core::{fmt::Display, ops::Deref};
 
+use alloc::{borrow::Cow, string::String};
+
 use crate::{
     json::{JsonDocument, JsonError},
     owned_bytes::OwnedBytes,
@@ -83,7 +85,7 @@ pub struct Gltf {
     binary_start: usize,
     binary_length: usize,
     contents: OwnedBytes,
-    json_document: JsonDocument<&'static [u8]>,
+    json_document: JsonDocument<Cow<'static, str>>,
 }
 
 impl Gltf {
@@ -114,7 +116,7 @@ impl Gltf {
         let Ok(length_u32) = u32::try_from(length) else {
             unreachable!("GlTF json should never be larger then 4GB.");
         };
-        let json_document = JsonDocument::new(contents.bytes())?;
+        let json_document = JsonDocument::new(String::from_utf8_lossy(contents.bytes()))?;
 
         Ok(Self {
             // TODO fetch version from json_document
@@ -148,20 +150,19 @@ impl Gltf {
         version: u32,
         length: u32,
     ) -> Result<Gltf, GltfValidationError> {
-        let contents_borrow = &*contents;
         let Ok(length_usize) = usize::try_from(length) else {
             return Err(GltfValidationError::Unaddressable);
         };
 
-        let Ok(json_length) = usize::try_from(u32::from_le_bytes(
-            contents_borrow[12..16].try_into().unwrap(),
-        )) else {
+        let Ok(json_length) =
+            usize::try_from(u32::from_le_bytes(contents[12..16].try_into().unwrap()))
+        else {
             return Err(GltfValidationError::Unaddressable);
         };
         if json_length % 4 != 0 {
             return Err(GltfValidationError::UnalignedBinaryChunk);
         }
-        let json_chunk_type = u32::from_le_bytes(contents_borrow[16..20].try_into().unwrap());
+        let json_chunk_type = u32::from_le_bytes(contents[16..20].try_into().unwrap());
         if json_chunk_type != 0 {
             return Err(GltfValidationError::UnknownChunk {
                 chunk: 0,
@@ -172,10 +173,7 @@ impl Gltf {
         let binary_start = 20 + json_length;
         let binary_length = length_usize - binary_start;
 
-        let ptr = {
-            let ptr = &*contents as *const [u8];
-            unsafe { ptr.as_ref_unchecked() }
-        };
+        let json_document = JsonDocument::new(String::from_utf8_lossy(contents.bytes()))?;
 
         Ok(Self {
             version,
@@ -185,7 +183,7 @@ impl Gltf {
             binary_start,
             binary_length,
             contents,
-            json_document: JsonDocument::new(ptr)?,
+            json_document,
         })
     }
 
@@ -194,17 +192,16 @@ impl Gltf {
         version: u32,
         length: u32,
     ) -> Result<Gltf, GltfValidationError> {
-        let contents_borrow = &*contents;
         let Ok(length_usize) = usize::try_from(length) else {
             return Err(GltfValidationError::Unaddressable);
         };
 
-        let Ok(json_length) = usize::try_from(u32::from_le_bytes(
-            contents_borrow[12..16].try_into().unwrap(),
-        )) else {
+        let Ok(json_length) =
+            usize::try_from(u32::from_le_bytes(contents[12..16].try_into().unwrap()))
+        else {
             return Err(GltfValidationError::Unaddressable);
         };
-        let json_chunk_type = u32::from_le_bytes(contents_borrow[16..20].try_into().unwrap());
+        let json_chunk_type = u32::from_le_bytes(contents[16..20].try_into().unwrap());
         if !Self::valid_chunk_type(json_chunk_type) {
             return Err(GltfValidationError::UnknownChunk {
                 chunk: 0,
@@ -219,14 +216,14 @@ impl Gltf {
             (length_usize, 0)
         } else {
             let Ok(binary_length) = usize::try_from(u32::from_le_bytes(
-                contents_borrow[binary_chunk_header..(binary_chunk_header + 4)]
+                contents[binary_chunk_header..(binary_chunk_header + 4)]
                     .try_into()
                     .unwrap(),
             )) else {
                 return Err(GltfValidationError::Unaddressable);
             };
             let binary_chunk_type = u32::from_le_bytes(
-                contents_borrow[(binary_chunk_header + 4)..(binary_chunk_header + 8)]
+                contents[(binary_chunk_header + 4)..(binary_chunk_header + 8)]
                     .try_into()
                     .unwrap(),
             );
@@ -239,10 +236,7 @@ impl Gltf {
             (binary_chunk_header + 8, binary_length)
         };
 
-        let ptr = {
-            let ptr = &*contents as *const [u8];
-            unsafe { ptr.as_ref_unchecked() }
-        };
+        let json_document = JsonDocument::new(String::from_utf8_lossy(contents.bytes()))?;
 
         Ok(Self {
             version,
@@ -252,7 +246,7 @@ impl Gltf {
             binary_start,
             binary_length,
             contents,
-            json_document: JsonDocument::new(ptr)?,
+            json_document,
         })
     }
 

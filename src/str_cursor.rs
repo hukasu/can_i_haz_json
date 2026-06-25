@@ -1,5 +1,5 @@
 /// A cursor position into a [`str`].
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StrCursor {
     pub byte: usize,
     pub line: usize,

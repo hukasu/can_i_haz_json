@@ -3,38 +3,16 @@
 mod error;
 #[cfg(test)]
 mod tests;
+mod token;
 
 use alloc::vec::Vec;
-use core::ops::RangeInclusive;
 
-use crate::json::tokenizer::error::TokenizerErrorType;
+use crate::{json::tokenizer::error::TokenizerErrorType, str_cursor::StrCursor};
 
-pub use self::error::TokenizerError;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Token {
-    bytes: RangeInclusive<usize>,
-    lines: RangeInclusive<usize>,
-    column_start: usize,
-    column_end: usize,
-    token_type: TokenType,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TokenType {
-    LCurly,
-    RCurly,
-    LBracket,
-    RBracket,
-    Colon,
-    Comma,
-    String,
-    Number,
-    True,
-    False,
-    Null,
-    Eof,
-}
+pub use self::{
+    error::TokenizerError,
+    token::{Token, TokenType},
+};
 
 #[expect(type_alias_bounds)]
 type State<T: Iterator<Item = char>> =
@@ -42,12 +20,8 @@ type State<T: Iterator<Item = char>> =
 
 pub struct JsonTokenizer<T: Iterator<Item = char>> {
     iterator: T,
-    byte: usize,
-    byte_start: usize,
-    column: usize,
-    column_start: usize,
-    line: usize,
-    line_start: usize,
+    cursor: StrCursor,
+    token_start_cursor: StrCursor,
     state: State<T>,
     fused: bool,
 }
@@ -56,21 +30,20 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     pub fn new(iterator: T) -> Self {
         Self {
             iterator,
-            byte: 0,
-            byte_start: 0,
-            column: 1,
-            column_start: 1,
-            line: 1,
-            line_start: 1,
+            cursor: StrCursor::default(),
+            token_start_cursor: StrCursor::default(),
             state: Self::start,
             fused: false,
         }
     }
 
+    /// Consumes the [`JsonTokenizer`] to its end, collecting
+    /// all the tokens into a [`Vec`].
     pub fn tokenize(self) -> Result<Vec<Token>, TokenizerError> {
         self.collect()
     }
 
+    /// Processing the string in search of a token
     fn start(&mut self) -> Result<Option<Token>, TokenizerError> {
         if self.fused {
             return self.eof();
@@ -81,66 +54,46 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
 
         let res = match current_char {
             '\u{0020}' | '\u{000D}' | '\u{0009}' => Ok(None),
-            '\u{000A}' => {
-                // Zero because it will be added by 1 at the end of the method
-                self.column = 0;
-                self.line += 1;
-                Ok(None)
-            }
+            '\u{000A}' => Ok(None),
             '{' => Ok(Some(Token {
-                bytes: self.byte..=self.byte,
-                lines: self.line..=self.line,
-                column_start: self.column,
-                column_end: self.column + 1,
+                start: self.cursor,
+                end: self.cursor + current_char,
                 token_type: TokenType::LCurly,
             })),
             '}' => Ok(Some(Token {
-                bytes: self.byte..=self.byte,
-                lines: self.line..=self.line,
-                column_start: self.column,
-                column_end: self.column + 1,
+                start: self.cursor,
+                end: self.cursor + current_char,
                 token_type: TokenType::RCurly,
             })),
             '[' => Ok(Some(Token {
-                bytes: self.byte..=self.byte,
-                lines: self.line..=self.line,
-                column_start: self.column,
-                column_end: self.column + 1,
+                start: self.cursor,
+                end: self.cursor + current_char,
                 token_type: TokenType::LBracket,
             })),
             ']' => Ok(Some(Token {
-                bytes: self.byte..=self.byte,
-                lines: self.line..=self.line,
-                column_start: self.column,
-                column_end: self.column + 1,
+                start: self.cursor,
+                end: self.cursor + current_char,
                 token_type: TokenType::RBracket,
             })),
             ',' => Ok(Some(Token {
-                bytes: self.byte..=self.byte,
-                lines: self.line..=self.line,
-                column_start: self.column,
-                column_end: self.column + 1,
+                start: self.cursor,
+                end: self.cursor + current_char,
                 token_type: TokenType::Comma,
             })),
             ':' => Ok(Some(Token {
-                bytes: self.byte..=self.byte,
-                lines: self.line..=self.line,
-                column_start: self.column,
-                column_end: self.column + 1,
+                start: self.cursor,
+                end: self.cursor + current_char,
                 token_type: TokenType::Colon,
             })),
             '"' => {
-                self.byte_start = self.byte;
-                self.column_start = self.column + 1;
-                self.line_start = self.line;
+                self.token_start_cursor = self.cursor;
                 self.state = Self::string;
                 Ok(None)
             }
             _ => self.invalid_token(),
         };
 
-        self.byte += current_char.len_utf8();
-        self.column += 1;
+        self.cursor += current_char;
 
         res
     }
@@ -154,10 +107,8 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             '"' => {
                 self.state = Self::start;
                 Ok(Some(Token {
-                    bytes: self.byte_start..=self.byte,
-                    lines: self.line_start..=self.line,
-                    column_start: self.column_start,
-                    column_end: self.column,
+                    start: self.token_start_cursor,
+                    end: self.cursor + current_char,
                     token_type: TokenType::String,
                 }))
             }
@@ -169,8 +120,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             _ => self.invalid_character_in_string(),
         };
 
-        self.byte += current_char.len_utf8();
-        self.column += 1;
+        self.cursor += current_char;
 
         res
     }
@@ -192,8 +142,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             _ => self.invalid_escaped_character_in_string(),
         };
 
-        self.byte += current_char.len_utf8();
-        self.column += 1;
+        self.cursor += current_char;
 
         res
     }
@@ -219,8 +168,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             self.invalid_escaped_character_in_string()
         };
 
-        self.byte += current_char.len_utf8();
-        self.column += 1;
+        self.cursor += current_char;
 
         res
     }
@@ -228,10 +176,8 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn eof(&self) -> Result<Option<Token>, TokenizerError> {
         Ok(Some(Token {
-            bytes: self.byte..=self.byte,
-            lines: self.line..=self.line,
-            column_start: self.column,
-            column_end: self.column + 1,
+            start: self.cursor,
+            end: self.cursor,
             token_type: TokenType::Eof,
         }))
     }
@@ -239,10 +185,8 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn unexpected_eof(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            bytes: self.byte..=self.byte,
-            lines: self.line..=self.line,
-            column_start: self.column,
-            column_end: self.column + 1,
+            start: self.cursor,
+            end: self.cursor,
             error_type: TokenizerErrorType::UnexpectedEof,
         })
     }
@@ -250,10 +194,8 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn unmatched_curly(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            bytes: self.byte..=self.byte,
-            lines: self.line..=self.line,
-            column_start: self.column,
-            column_end: self.column + 1,
+            start: self.cursor,
+            end: self.cursor,
             error_type: TokenizerErrorType::UnmatchedCurly,
         })
     }
@@ -261,20 +203,16 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn unmatched_bracket(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            bytes: self.byte..=self.byte,
-            lines: self.line..=self.line,
-            column_start: self.column,
-            column_end: self.column + 1,
+            start: self.cursor,
+            end: self.cursor,
             error_type: TokenizerErrorType::UnmatchedBracket,
         })
     }
     #[inline(always)]
     fn invalid_token(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            bytes: self.byte..=self.byte,
-            lines: self.line..=self.line,
-            column_start: self.column,
-            column_end: self.column + 1,
+            start: self.cursor,
+            end: self.cursor,
             error_type: TokenizerErrorType::InvalidToken,
         })
     }
@@ -282,10 +220,8 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn invalid_character_in_string(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            bytes: self.byte..=self.byte,
-            lines: self.line..=self.line,
-            column_start: self.column,
-            column_end: self.column + 1,
+            start: self.cursor,
+            end: self.cursor,
             error_type: TokenizerErrorType::InvalidCharacterInString,
         })
     }
@@ -293,10 +229,8 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn invalid_escaped_character_in_string(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            bytes: self.byte..=self.byte,
-            lines: self.line..=self.line,
-            column_start: self.column,
-            column_end: self.column + 1,
+            start: self.cursor,
+            end: self.cursor,
             error_type: TokenizerErrorType::InvalidEscapedCharacterInString,
         })
     }

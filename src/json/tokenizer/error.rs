@@ -1,11 +1,11 @@
-use core::{error::Error, fmt::Display, ops::RangeInclusive};
+use core::{error::Error, fmt::Display};
+
+use crate::str_cursor::StrCursor;
 
 #[derive(Debug)]
 pub struct TokenizerError {
-    pub(super) bytes: RangeInclusive<usize>,
-    pub(super) lines: RangeInclusive<usize>,
-    pub(super) column_start: usize,
-    pub(super) column_end: usize,
+    pub(super) start: StrCursor,
+    pub(super) end: StrCursor,
     pub(super) error_type: TokenizerErrorType,
 }
 
@@ -26,45 +26,35 @@ impl Display for TokenizerError {
                 write!(
                     f,
                     "Unmatched curly brace on {}:{} (bytes {:?}).",
-                    self.lines.start(),
-                    self.column_start,
-                    self.bytes
+                    self.start.line, self.start.column, self.start.byte
                 )
             }
             TokenizerErrorType::UnmatchedBracket => {
                 write!(
                     f,
                     "Unmatched bracket on {}:{} (bytes {:?}).",
-                    self.lines.start(),
-                    self.column_start,
-                    self.bytes
+                    self.start.line, self.start.column, self.start.byte,
                 )
             }
             TokenizerErrorType::InvalidToken => {
                 write!(
                     f,
                     "Character position {}:{} (bytes {:?}) is not part of a valid token.",
-                    self.lines.start(),
-                    self.column_start,
-                    self.bytes
+                    self.start.line, self.start.column, self.start.byte,
                 )
             }
             TokenizerErrorType::InvalidCharacterInString => {
                 write!(
                     f,
                     "Invalid character in string on position {}:{} (bytes {:?}).",
-                    self.lines.start(),
-                    self.column_start,
-                    self.bytes
+                    self.start.line, self.start.column, self.start.byte,
                 )
             }
             TokenizerErrorType::InvalidEscapedCharacterInString => {
                 write!(
                     f,
                     "Invalid escaped character in string on position {}:{} (bytes {:?}).",
-                    self.lines.start(),
-                    self.column_start,
-                    self.bytes
+                    self.start.line, self.start.column, self.start.byte,
                 )
             }
             TokenizerErrorType::UnexpectedEof => {

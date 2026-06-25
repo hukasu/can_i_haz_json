@@ -63,6 +63,7 @@ extern crate alloc;
 
 pub mod json;
 pub mod owned_bytes;
+pub mod str_cursor;
 
 use core::{fmt::Display, ops::Deref};
 

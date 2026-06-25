@@ -23,3 +23,22 @@ impl Default for StrCursor {
         }
     }
 }
+
+impl core::ops::Add<char> for StrCursor {
+    type Output = StrCursor;
+
+    fn add(self, rhs: char) -> Self::Output {
+        let new_line = rhs == '\n';
+        Self {
+            byte: self.byte + rhs.len_utf8(),
+            line: self.line + new_line as usize,
+            column: if new_line { 1 } else { self.column + 1 },
+        }
+    }
+}
+
+impl core::ops::AddAssign<char> for StrCursor {
+    fn add_assign(&mut self, rhs: char) {
+        *self = *self + rhs;
+    }
+}

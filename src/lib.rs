@@ -67,10 +67,10 @@ pub mod str_cursor;
 
 use core::{fmt::Display, ops::Deref};
 
-use alloc::{borrow::Cow, string::String};
+use alloc::string::String;
 
 use crate::{
-    json::{JsonDocument, JsonError},
+    json::{JsonDocument, JsonParsingError},
     owned_bytes::OwnedBytes,
 };
 
@@ -86,7 +86,7 @@ pub struct Gltf {
     binary_start: usize,
     binary_length: usize,
     contents: OwnedBytes,
-    json_document: JsonDocument<Cow<'static, str>>,
+    json_document: JsonDocument,
 }
 
 impl Gltf {
@@ -274,7 +274,7 @@ pub enum GltfValidationError {
     /// 4 bytes.
     UnalignedBinaryChunk,
     /// An error occurred while decoding [`Gltf`] json chunk.
-    Json(JsonError),
+    Json(JsonParsingError),
 }
 
 impl Display for GltfValidationError {
@@ -315,8 +315,8 @@ impl Display for GltfValidationError {
 
 impl core::error::Error for GltfValidationError {}
 
-impl From<JsonError> for GltfValidationError {
-    fn from(value: JsonError) -> Self {
+impl From<JsonParsingError> for GltfValidationError {
+    fn from(value: JsonParsingError) -> Self {
         Self::Json(value)
     }
 }

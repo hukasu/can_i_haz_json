@@ -1,14 +1,10 @@
-pub struct JsonValue {
-    r#type: JsonValueType,
-    index: usize,
-}
-
-#[derive(Debug)]
-pub enum JsonValueType {
+#[derive(PartialEq, Eq)]
+pub enum JsonValue {
     String,
     Number,
     Object,
     Array,
-    Bool,
+    True,
+    False,
     Null,
 }

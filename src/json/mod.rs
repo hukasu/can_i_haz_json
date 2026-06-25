@@ -9,43 +9,40 @@ mod value;
 
 use core::{error::Error, fmt::Display, ops::Deref};
 
-use alloc::vec::Vec;
-
-use crate::json::tokenizer::{JsonTokenizer, TokenizerError};
-
-pub use self::{
-    array::JsonArray,
-    number::JsonNumber,
-    object::JsonObject,
-    parser::JsonParsingError,
-    string::JsonString,
-    value::{JsonValue, JsonValueType},
+use crate::json::{
+    parser::JsonParser,
+    tokenizer::{JsonTokenizer, TokenizerError},
 };
 
-#[derive(Clone, PartialEq, Eq)]
-pub struct JsonDocument<T: Sized + Deref<Target = str> + Clone> {
-    contents: T,
+pub use self::{
+    array::JsonArray, number::JsonNumber, object::JsonObject, parser::JsonParsingError,
+    string::JsonString, value::JsonValue,
+};
+
+#[derive(PartialEq, Eq)]
+pub struct JsonDocument {
+    root: JsonValue,
 }
 
-impl JsonDocument<&str> {
-    pub const BLANK: Self = JsonDocument { contents: "" };
-}
-
-impl<T: Deref<Target = str> + Clone + Unpin> JsonDocument<T> {
+impl JsonDocument {
     /// Build a [`JsonDocument`] from the entire contents.
-    pub fn new(contents: T) -> Result<Self, JsonError> {
-        let data = contents.deref();
+    pub fn new<T: Deref<Target = str> + Clone + Unpin>(
+        contents: T,
+    ) -> Result<Self, JsonParsingError> {
+        Self::parse(contents.deref())
+    }
 
-        let tokens =
-            JsonTokenizer::new(data.chars()).collect::<Result<Vec<_>, TokenizerError>>()?;
-
-        Ok(Self { contents })
+    fn parse(data: &str) -> Result<Self, JsonParsingError> {
+        let tokens = JsonTokenizer::new(data.chars());
+        let root = JsonParser::parse(tokens)?;
+        Ok(Self { root })
     }
 }
 
 #[derive(Debug)]
 pub enum JsonError {
     Tokenizer(TokenizerError),
+    Parsing(JsonParsingError),
 }
 
 impl Display for JsonError {
@@ -54,6 +51,10 @@ impl Display for JsonError {
             Self::Tokenizer(tokenizer) => {
                 writeln!(f, "Failed to tokenize Json.")?;
                 write!(f, "{tokenizer}")
+            }
+            Self::Parsing(parser) => {
+                writeln!(f, "Failed to parse Json.")?;
+                write!(f, "{parser}")
             }
         }
     }
@@ -64,5 +65,14 @@ impl Error for JsonError {}
 impl From<TokenizerError> for JsonError {
     fn from(value: TokenizerError) -> Self {
         Self::Tokenizer(value)
+    }
+}
+
+impl From<JsonParsingError> for JsonError {
+    fn from(value: JsonParsingError) -> Self {
+        match value {
+            JsonParsingError::Tokenizer(value) => Self::Tokenizer(value),
+            other => Self::Parsing(other),
+        }
     }
 }

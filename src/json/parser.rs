@@ -1,8 +1,38 @@
 use core::{error::Error, fmt::Display};
 
-use crate::json::tokenizer::TokenizerError;
+use alloc::vec::Vec;
 
-// struct JsonParser<T: Iterator<Item = char>> {}
+use crate::json::{
+    JsonValue,
+    tokenizer::{JsonTokenizer, TokenType, TokenizerError},
+};
+
+pub struct JsonParser;
+
+impl JsonParser {
+    pub fn parse<T: Iterator<Item = char>>(
+        tokens: JsonTokenizer<T>,
+    ) -> Result<JsonValue, JsonParsingError> {
+        // let
+        let mut stack = alloc::vec![];
+
+        for token in tokens {
+            let token = token?;
+            match token.token_type {
+                TokenType::String => match stack.last_mut() {
+                    Some(JsonValue::Array) => {
+                        unimplemented!()
+                    }
+                    None => {}
+                    _ => unimplemented!(),
+                },
+                _ => unimplemented!(),
+            }
+        }
+
+        unimplemented!()
+    }
+}
 
 /// A failure on the parsing of a JSON
 #[derive(Debug)]

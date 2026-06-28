@@ -62,7 +62,7 @@
 extern crate alloc;
 
 pub mod json;
-pub mod owned_bytes;
+pub mod owned_t;
 pub mod str_cursor;
 
 use core::{fmt::Display, ops::Deref};
@@ -71,7 +71,7 @@ use alloc::string::String;
 
 use crate::{
     json::{JsonDocument, JsonParsingError},
-    owned_bytes::OwnedBytes,
+    owned_t::OwnedBytes,
 };
 
 const GLTF_MAGIC: [u8; 4] = [0x67, 0x6C, 0x54, 0x46];

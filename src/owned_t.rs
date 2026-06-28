@@ -69,6 +69,14 @@ impl<T: 'static + ?Sized> Deref for OwnedT<T> {
     }
 }
 
+impl<T: 'static + ?Sized + PartialEq> PartialEq for OwnedT<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.data == other.data
+    }
+}
+
+impl<T: 'static + ?Sized + Eq> Eq for OwnedT<T> {}
+
 impl<T: 'static + ?Sized> Drop for OwnedT<T> {
     fn drop(&mut self) {
         (self.dropper)()

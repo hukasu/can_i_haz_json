@@ -32,7 +32,22 @@ pub fn make_test_suite(token_stream: TokenStream) -> TokenStream {
                 }
             }
 
-            let mut tests = vec![];
+            let mut tests = vec![
+                r#"
+// Ensure the logger initializes exactly once across parallel tests
+static INIT: ::std::sync::Once = ::std::sync::Once::new();
+
+fn init_logger() {
+    INIT.call_once(|| {
+        ::env_logger::builder()
+            .is_test(true) // Crucial for output capturing
+            .try_init()
+            .ok();
+        });
+    }
+"#
+                .to_owned(),
+            ];
             for dir_entry in std::fs::read_dir(path).unwrap() {
                 let Ok(dir_entry) = dir_entry else {
                     panic!("`make_test_suite` failed to read directory entry.");
@@ -44,6 +59,7 @@ pub fn make_test_suite(token_stream: TokenStream) -> TokenStream {
 #[test]
 {}
 fn {}() {{
+    init_logger();
     let test_path = "{}";
     let contents = std::fs::read_to_string(test_path).unwrap();
     ::can_i_haz_gltf::json::JsonDocument::new(contents).unwrap();

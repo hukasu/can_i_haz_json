@@ -9,9 +9,12 @@ mod value;
 
 use core::{error::Error, fmt::Display, ops::Deref};
 
-use crate::json::{
-    parser::JsonParser,
-    tokenizer::{JsonTokenizer, TokenizerError},
+use crate::{
+    json::{
+        parser::JsonParser,
+        tokenizer::{JsonTokenizer, TokenizerError},
+    },
+    owned_t::OwnedStr,
 };
 
 pub use self::{
@@ -21,21 +24,21 @@ pub use self::{
 
 #[derive(PartialEq, Eq)]
 pub struct JsonDocument {
+    data: OwnedStr,
     root: JsonValue,
 }
 
 impl JsonDocument {
     /// Build a [`JsonDocument`] from the entire contents.
-    pub fn new<T: Deref<Target = str> + Clone + Unpin>(
-        contents: T,
-    ) -> Result<Self, JsonParsingError> {
-        Self::parse(contents.deref())
+    pub fn new<T: Deref<Target = str> + 'static>(contents: T) -> Result<Self, JsonParsingError> {
+        let owned_str = OwnedStr::new(contents);
+        Self::parse(owned_str)
     }
 
-    fn parse(data: &str) -> Result<Self, JsonParsingError> {
+    fn parse(data: OwnedStr) -> Result<Self, JsonParsingError> {
         let tokens = JsonTokenizer::new(data.chars());
         let root = JsonParser::parse(tokens)?;
-        Ok(Self { root })
+        Ok(Self { data, root })
     }
 }
 

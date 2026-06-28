@@ -33,6 +33,7 @@ pub struct OwnedT<T: 'static + ?Sized> {
 }
 
 pub type OwnedBytes = OwnedT<[u8]>;
+pub type OwnedStr = OwnedT<str>;
 
 impl<T: 'static + ?Sized> OwnedT<T> {
     /// Dereferences the data and wraps it into an object that can produce

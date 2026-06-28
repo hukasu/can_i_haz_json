@@ -3,7 +3,7 @@ use core::ops::Deref;
 use alloc::boxed::Box;
 
 pub struct OwnedT<T: 'static + ?Sized> {
-    bytes: &'static T,
+    data: &'static T,
     dropper: Box<dyn Fn()>,
 }
 
@@ -18,28 +18,26 @@ impl<T: 'static + ?Sized> OwnedT<T> {
         let contents = unsafe { &*ptr as &D };
 
         Self {
-            bytes: contents,
+            data: contents,
             dropper,
         }
+    }
+
+    pub fn data(&self) -> &'static T {
+        self.data
+    }
+}
+
+impl<T: 'static + ?Sized> Deref for OwnedT<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.data
     }
 }
 
 impl<T: 'static + ?Sized> Drop for OwnedT<T> {
     fn drop(&mut self) {
         (self.dropper)()
-    }
-}
-
-impl OwnedBytes {
-    pub fn bytes(&self) -> &'static [u8] {
-        self.bytes
-    }
-}
-
-impl Deref for OwnedBytes {
-    type Target = [u8];
-
-    fn deref(&self) -> &Self::Target {
-        self.bytes
     }
 }

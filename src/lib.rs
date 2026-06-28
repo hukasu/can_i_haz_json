@@ -117,7 +117,7 @@ impl Gltf {
         let Ok(length_u32) = u32::try_from(length) else {
             unreachable!("GlTF json should never be larger then 4GB.");
         };
-        let json_document = JsonDocument::new(String::from_utf8_lossy(contents.bytes()))?;
+        let json_document = JsonDocument::new(String::from_utf8_lossy(contents.data()))?;
 
         Ok(Self {
             // TODO fetch version from json_document
@@ -174,7 +174,7 @@ impl Gltf {
         let binary_start = 20 + json_length;
         let binary_length = length_usize - binary_start;
 
-        let json_document = JsonDocument::new(String::from_utf8_lossy(contents.bytes()))?;
+        let json_document = JsonDocument::new(String::from_utf8_lossy(contents.data()))?;
 
         Ok(Self {
             version,
@@ -237,7 +237,7 @@ impl Gltf {
             (binary_chunk_header + 8, binary_length)
         };
 
-        let json_document = JsonDocument::new(String::from_utf8_lossy(contents.bytes()))?;
+        let json_document = JsonDocument::new(String::from_utf8_lossy(contents.data()))?;
 
         Ok(Self {
             version,

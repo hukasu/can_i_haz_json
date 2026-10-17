@@ -3,12 +3,12 @@ use core::{error::Error, fmt::Display};
 use crate::json::{JsonParsingError, tokenizer::TokenizerError};
 
 #[derive(Debug)]
-pub enum JsonError {
+pub enum JsonError<'a> {
     Tokenizer(TokenizerError),
-    Parsing(JsonParsingError),
+    Parsing(JsonParsingError<'a>),
 }
 
-impl Display for JsonError {
+impl Display for JsonError<'_> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Tokenizer(tokenizer) => {

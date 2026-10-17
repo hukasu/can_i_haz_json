@@ -4,7 +4,7 @@ use crate::{GLTF_BIN_CHUNK_TYPE, GLTF_JSON_CHUNK_TYPE, json::JsonParsingError};
 
 /// A [`Gltf`] failed validation during creating
 #[derive(Debug)]
-pub enum GltfValidationError {
+pub enum GltfValidationError<'a> {
     /// The [`Gltf`] had the wrong magic.
     WrongMagic,
     /// The [`Gltf`] has a length that can't be addressed
@@ -20,10 +20,10 @@ pub enum GltfValidationError {
     /// 4 bytes.
     UnalignedBinaryChunk,
     /// An error occurred while decoding [`Gltf`] json chunk.
-    Json(JsonParsingError),
+    Json(JsonParsingError<'a>),
 }
 
-impl Display for GltfValidationError {
+impl Display for GltfValidationError<'_> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::WrongMagic => {
@@ -59,10 +59,10 @@ impl Display for GltfValidationError {
     }
 }
 
-impl core::error::Error for GltfValidationError {}
+impl core::error::Error for GltfValidationError<'_> {}
 
-impl From<JsonParsingError> for GltfValidationError {
-    fn from(value: JsonParsingError) -> Self {
+impl<'a> From<JsonParsingError<'a>> for GltfValidationError<'a> {
+    fn from(value: JsonParsingError<'a>) -> Self {
         Self::Json(value)
     }
 }

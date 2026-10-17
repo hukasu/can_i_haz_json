@@ -28,7 +28,7 @@ impl<'a> Json<'a> {
     /// Build a [`JsonDocument`] from the entire contents.
     pub fn new(data: Cow<'a, str>) -> Result<Self, JsonParsingError> {
         let tokens = JsonTokenizer::new(data.chars());
-        let root = JsonParser::parse(tokens)?;
+        let compiled = JsonParser::parse(tokens)?;
         unimplemented!()
     }
 }
@@ -54,5 +54,12 @@ mod tests {
     fn empty_object() {
         let json_data = "{}";
         let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+
+        let JsonValue::Object(ref object) = *json else {
+            panic!("Json did not have Object root.");
+        };
+
+        assert_eq!(object.len(), 0);
+        assert!(object.is_empty());
     }
 }

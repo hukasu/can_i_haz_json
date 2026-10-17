@@ -1,21 +1,12 @@
-use alloc::{collections::BTreeMap, string::String};
-use core::ops::Deref;
+use crate::json::JsonValue;
 
-use crate::json::{JsonValue, data::JsonData};
-
-pub struct JsonObject<'a, C: Deref<Target = JsonData>> {
-    data: C,
-    object: &'a InternalJsonObject,
+#[derive(Debug, PartialEq, Eq)]
+pub struct JsonObject<'a> {
+    pairs: &'a [JsonKeyValue<'a>],
 }
 
-impl<C: Deref<Target = JsonData>> Deref for JsonObject<'_, C> {
-    type Target = InternalJsonObject;
-
-    fn deref(&self) -> &Self::Target {
-        self.object
-    }
-}
-
-pub struct InternalJsonObject {
-    values: BTreeMap<String, JsonValue>,
+#[derive(Debug, PartialEq, Eq)]
+pub struct JsonKeyValue<'a> {
+    key: &'a str,
+    value: &'a JsonValue<'a>,
 }

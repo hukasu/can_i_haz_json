@@ -1,5 +1,4 @@
 mod array;
-mod data;
 mod error;
 mod number;
 mod object;
@@ -8,7 +7,9 @@ mod string;
 mod tokenizer;
 mod value;
 
-use alloc::borrow::Cow;
+use core::ops::Deref;
+
+use alloc::{borrow::Cow, boxed::Box};
 
 use crate::json::{parser::JsonParser, tokenizer::JsonTokenizer};
 
@@ -20,7 +21,7 @@ pub use self::{
 #[derive(PartialEq, Eq)]
 pub struct Json<'a> {
     data: Cow<'a, str>,
-    root: JsonValue,
+    compiled: Box<[u8]>,
 }
 
 impl<'a> Json<'a> {
@@ -29,5 +30,29 @@ impl<'a> Json<'a> {
         let tokens = JsonTokenizer::new(data.chars());
         let root = JsonParser::parse(tokens)?;
         unimplemented!()
+    }
+}
+
+impl<'a> Deref for Json<'a> {
+    type Target = JsonValue<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe {
+            self.compiled
+                .as_ptr()
+                .cast::<JsonValue>()
+                .as_ref_unchecked()
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_object() {
+        let json_data = "{}";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
     }
 }

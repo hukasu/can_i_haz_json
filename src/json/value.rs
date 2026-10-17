@@ -1,8 +1,10 @@
-#[derive(PartialEq, Eq)]
-pub enum JsonValue {
+use crate::json::JsonObject;
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum JsonValue<'a> {
+    Object(JsonObject<'a>),
     String,
     Number,
-    Object,
     Array,
     True,
     False,

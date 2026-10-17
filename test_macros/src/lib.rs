@@ -69,7 +69,7 @@ fn {}() {{
     init_logger();
     let test_path = "{}";
     let contents = std::fs::read_to_string(test_path).unwrap();
-    ::can_i_haz_gltf::json::JsonDocument::new(contents).unwrap();
+    ::can_i_haz_gltf::json::Json::new(::std::borrow::Cow::Owned(contents)).unwrap();
 }}
 "#,
                 if file_name.to_string_lossy().starts_with("n_") {
@@ -135,7 +135,7 @@ pub fn make_gltf_tests(token_stream: TokenStream) -> TokenStream {
 fn {}_{}() {{
     let test_path = "{}";
     let contents = std::fs::read(test_path).unwrap();
-    ::can_i_haz_gltf::Gltf::new(contents.into_boxed_slice()).unwrap();
+    ::can_i_haz_gltf::Gltf::new(::std::borrow::Cow::Owned(contents)).unwrap();
 }}
 "#,
                 name.replace("2", "Two")

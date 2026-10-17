@@ -65,194 +65,30 @@ pub mod json;
 pub mod owned_t;
 pub mod str_cursor;
 
-use core::{fmt::Display, ops::Deref};
+use core::fmt::Display;
 
-use alloc::string::String;
+use alloc::borrow::Cow;
 
-use crate::{
-    json::{JsonDocument, JsonParsingError},
-    owned_t::OwnedBytes,
-};
+use crate::json::JsonParsingError;
 
 const GLTF_MAGIC: [u8; 4] = [0x67, 0x6C, 0x54, 0x46];
 const GLTF_JSON_CHUNK_TYPE: u32 = 0x4E4F534A;
 const GLTF_BIN_CHUNK_TYPE: u32 = 0x004E4942;
 
-pub struct Gltf {
-    version: u32,
-    length: u32,
-    json_start: usize,
-    json_length: usize,
-    binary_start: usize,
-    binary_length: usize,
-    contents: OwnedBytes,
-    json_document: JsonDocument,
+pub struct Gltf<'a> {
+    data: Cow<'a, [u8]>,
 }
 
-impl Gltf {
-    pub fn new<T: Deref<Target = [u8]> + 'static>(
-        contents: T,
-    ) -> Result<Self, GltfValidationError> {
-        let contents = OwnedBytes::new(contents);
-
-        if contents[0] == b'{' {
-            Self::gltf_new(contents)
-        } else if contents[..4] != GLTF_MAGIC {
-            Err(GltfValidationError::WrongMagic)
-        } else {
-            Self::glb_new(contents)
-        }
-    }
-
-    /// Returns the version of the specification used to generate the
-    /// [`Gltf`]. This is only populated on binary `.glb`, returning `None`
-    /// for `.gltf` files. The specification of a `.gltf` file can be
-    /// queried through the `asset` field of the document.
-    pub fn version(&self) -> Option<u32> {
-        Some(self.version).filter(|version| *version != 0)
-    }
-
-    fn gltf_new(contents: OwnedBytes) -> Result<Self, GltfValidationError> {
-        let length = contents.len();
-        let Ok(length_u32) = u32::try_from(length) else {
-            unreachable!("GlTF json should never be larger then 4GB.");
-        };
-        let json_document = JsonDocument::new(String::from_utf8_lossy(unsafe { contents.data() }))?;
-
-        Ok(Self {
-            // TODO fetch version from json_document
-            version: 0,
-            length: length_u32,
-            json_start: 0,
-            json_length: length,
-            binary_start: length,
-            binary_length: 0,
-            contents,
-            json_document,
-        })
-    }
-
-    fn glb_new(contents: OwnedBytes) -> Result<Gltf, GltfValidationError> {
-        let version = u32::from_le_bytes(contents[4..8].try_into().unwrap());
-        let length = u32::from_le_bytes(contents[8..12].try_into().unwrap());
-
-        if version == 1 {
-            Self::glb_1_new(contents, version, length)
-        } else if version == 2 {
-            Self::glb_2_new(contents, version, length)
-        } else {
-            Err(GltfValidationError::UnknownVersion)
-        }
-    }
-
-    /// Implementation of [KHR_binary_glTF](https://github.com/KhronosGroup/glTF/blob/main/extensions/1.0/Khronos/KHR_binary_glTF/README.md)
-    fn glb_1_new(
-        contents: OwnedBytes,
-        version: u32,
-        length: u32,
-    ) -> Result<Gltf, GltfValidationError> {
-        let Ok(length_usize) = usize::try_from(length) else {
-            return Err(GltfValidationError::Unaddressable);
-        };
-
-        let Ok(json_length) =
-            usize::try_from(u32::from_le_bytes(contents[12..16].try_into().unwrap()))
-        else {
-            return Err(GltfValidationError::Unaddressable);
-        };
-        if json_length % 4 != 0 {
-            return Err(GltfValidationError::UnalignedBinaryChunk);
-        }
-        let json_chunk_type = u32::from_le_bytes(contents[16..20].try_into().unwrap());
-        if json_chunk_type != 0 {
-            return Err(GltfValidationError::UnknownChunk {
-                chunk: 0,
-                chunk_type: json_chunk_type,
-            });
-        }
-
-        let binary_start = 20 + json_length;
-        let binary_length = length_usize - binary_start;
-
-        let json_document = JsonDocument::new(String::from_utf8_lossy(unsafe { contents.data() }))?;
-
-        Ok(Self {
-            version,
-            length,
-            json_start: 20,
-            json_length,
-            binary_start,
-            binary_length,
-            contents,
-            json_document,
-        })
-    }
-
-    fn glb_2_new(
-        contents: OwnedBytes,
-        version: u32,
-        length: u32,
-    ) -> Result<Gltf, GltfValidationError> {
-        let Ok(length_usize) = usize::try_from(length) else {
-            return Err(GltfValidationError::Unaddressable);
-        };
-
-        let Ok(json_length) =
-            usize::try_from(u32::from_le_bytes(contents[12..16].try_into().unwrap()))
-        else {
-            return Err(GltfValidationError::Unaddressable);
-        };
-        let json_chunk_type = u32::from_le_bytes(contents[16..20].try_into().unwrap());
-        if !Self::valid_chunk_type(json_chunk_type) {
-            return Err(GltfValidationError::UnknownChunk {
-                chunk: 0,
-                chunk_type: json_chunk_type,
-            });
-        } else if json_chunk_type != GLTF_JSON_CHUNK_TYPE {
-            return Err(GltfValidationError::MissingJsonChunk);
-        }
-
-        let binary_chunk_header = 20 + json_length;
-        let (binary_start, binary_length) = if binary_chunk_header == length_usize {
-            (length_usize, 0)
-        } else {
-            let Ok(binary_length) = usize::try_from(u32::from_le_bytes(
-                contents[binary_chunk_header..(binary_chunk_header + 4)]
-                    .try_into()
-                    .unwrap(),
-            )) else {
-                return Err(GltfValidationError::Unaddressable);
-            };
-            let binary_chunk_type = u32::from_le_bytes(
-                contents[(binary_chunk_header + 4)..(binary_chunk_header + 8)]
-                    .try_into()
-                    .unwrap(),
-            );
-            if !Self::valid_chunk_type(binary_chunk_type) {
-                return Err(GltfValidationError::UnknownChunk {
-                    chunk: 1,
-                    chunk_type: binary_chunk_type,
-                });
-            }
-            (binary_chunk_header + 8, binary_length)
-        };
-
-        let json_document = JsonDocument::new(String::from_utf8_lossy(unsafe { contents.data() }))?;
-
-        Ok(Self {
-            version,
-            length,
-            json_start: 20,
-            json_length,
-            binary_start,
-            binary_length,
-            contents,
-            json_document,
-        })
-    }
-
-    const fn valid_chunk_type(chunk_type: u32) -> bool {
-        chunk_type == GLTF_JSON_CHUNK_TYPE || chunk_type == GLTF_BIN_CHUNK_TYPE
+impl<'a> Gltf<'a> {
+    pub fn new(data: Cow<'a, [u8]>) -> Result<Self, GltfValidationError> {
+        // if contents[0] == b'{' {
+        //     Self::gltf_new(contents)
+        // } else if contents[..4] != GLTF_MAGIC {
+        //     Err(GltfValidationError::WrongMagic)
+        // } else {
+        //     Self::glb_new(contents)
+        // }
+        Ok(Gltf { data })
     }
 }
 

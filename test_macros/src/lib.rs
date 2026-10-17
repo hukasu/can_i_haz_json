@@ -50,8 +50,8 @@ fn init_logger() {
             .is_test(true) // Crucial for output capturing
             .try_init()
             .ok();
-        });
-    }
+    });
+}
 "#
         .to_owned(),
     ];
@@ -64,19 +64,18 @@ fn init_logger() {
             let test = format!(
                 r#"
 #[test]
-{}
 fn {}() {{
     init_logger();
     let test_path = "{}";
     let contents = std::fs::read_to_string(test_path).unwrap();
-    ::can_i_haz_gltf::json::Json::new(::std::borrow::Cow::Owned(contents)).unwrap();
+    let res = ::can_i_haz_gltf::json::Json::new(::std::borrow::Cow::Owned(contents));
+    if {} {{
+        assert!(res.is_err());
+    }} else {{
+        assert!(res.is_ok());
+    }}
 }}
 "#,
-                if file_name.to_string_lossy().starts_with("n_") {
-                    "\n#[should_panic]"
-                } else {
-                    ""
-                },
                 file_name
                     .to_string_lossy()
                     .trim_end_matches(".json")
@@ -84,7 +83,8 @@ fn {}() {{
                     .replace("-", "_hyphen_")
                     .replace("+", "_plus_")
                     .replace("#", "_pound_"),
-                dir_entry_path.display()
+                dir_entry_path.display(),
+                file_name.to_string_lossy().starts_with("n_"),
             );
 
             tests.push(test);

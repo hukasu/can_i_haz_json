@@ -28,6 +28,6 @@ impl<'a> Json<'a> {
     pub fn new(data: Cow<'a, str>) -> Result<Self, JsonParsingError> {
         let tokens = JsonTokenizer::new(data.chars());
         let root = JsonParser::parse(tokens)?;
-        Ok(Self { data, root })
+        unimplemented!()
     }
 }

@@ -87,6 +87,6 @@ impl<'a> Gltf<'a> {
         // } else {
         //     Self::glb_new(contents)
         // }
-        Ok(Gltf { data })
+        unimplemented!()
     }
 }

@@ -7,14 +7,13 @@ mod string;
 mod tokenizer;
 mod value;
 
-use core::{error::Error, fmt::Display, ops::Deref};
+use core::{error::Error, fmt::Display};
 
-use crate::{
-    json::{
-        parser::JsonParser,
-        tokenizer::{JsonTokenizer, TokenizerError},
-    },
-    owned_t::OwnedStr,
+use alloc::borrow::Cow;
+
+use crate::json::{
+    parser::JsonParser,
+    tokenizer::{JsonTokenizer, TokenizerError},
 };
 
 pub use self::{
@@ -23,19 +22,14 @@ pub use self::{
 };
 
 #[derive(PartialEq, Eq)]
-pub struct JsonDocument {
-    data: OwnedStr,
+pub struct Json<'a> {
+    data: Cow<'a, str>,
     root: JsonValue,
 }
 
-impl JsonDocument {
+impl<'a> Json<'a> {
     /// Build a [`JsonDocument`] from the entire contents.
-    pub fn new<T: Deref<Target = str> + 'static>(contents: T) -> Result<Self, JsonParsingError> {
-        let owned_str = OwnedStr::new(contents);
-        Self::parse(owned_str)
-    }
-
-    fn parse(data: OwnedStr) -> Result<Self, JsonParsingError> {
+    pub fn new(data: Cow<'a, str>) -> Result<Self, JsonParsingError> {
         let tokens = JsonTokenizer::new(data.chars());
         let root = JsonParser::parse(tokens)?;
         Ok(Self { data, root })

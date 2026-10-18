@@ -4,9 +4,9 @@ use crate::json::JsonObject;
 #[repr(C)]
 pub enum JsonValue<'a> {
     Object(JsonObject<'a>),
-    String,
-    Number,
     Array,
+    String(&'a str),
+    Number(&'a str),
     True,
     False,
     Null,

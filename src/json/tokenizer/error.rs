@@ -11,8 +11,6 @@ pub struct TokenizerError {
 
 #[derive(Debug)]
 pub enum TokenizerErrorType {
-    UnmatchedCurly,
-    UnmatchedBracket,
     InvalidToken,
     InvalidCharacterInString,
     InvalidEscapedCharacterInString,
@@ -22,20 +20,6 @@ pub enum TokenizerErrorType {
 impl Display for TokenizerError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self.error_type {
-            TokenizerErrorType::UnmatchedCurly => {
-                write!(
-                    f,
-                    "Unmatched curly brace on {}:{} (bytes {:?}).",
-                    self.start.line, self.start.column, self.start.byte
-                )
-            }
-            TokenizerErrorType::UnmatchedBracket => {
-                write!(
-                    f,
-                    "Unmatched bracket on {}:{} (bytes {:?}).",
-                    self.start.line, self.start.column, self.start.byte,
-                )
-            }
             TokenizerErrorType::InvalidToken => {
                 write!(
                     f,

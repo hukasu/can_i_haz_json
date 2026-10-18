@@ -264,23 +264,6 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     }
 
     #[inline(always)]
-    fn unmatched_curly(&self) -> Result<Option<Token>, TokenizerError> {
-        Err(TokenizerError {
-            start: self.cursor,
-            end: self.cursor,
-            error_type: TokenizerErrorType::UnmatchedCurly,
-        })
-    }
-
-    #[inline(always)]
-    fn unmatched_bracket(&self) -> Result<Option<Token>, TokenizerError> {
-        Err(TokenizerError {
-            start: self.cursor,
-            end: self.cursor,
-            error_type: TokenizerErrorType::UnmatchedBracket,
-        })
-    }
-    #[inline(always)]
     fn invalid_token(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
             start: self.cursor,

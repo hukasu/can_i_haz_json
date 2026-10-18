@@ -58,8 +58,6 @@ impl JsonParserState {
         stack: &mut Vec<JsonParserTask>,
         token: &Token,
     ) -> Result<Self, JsonParsingErrorType> {
-        assert!(matches!(stack.last(), Some(JsonParserTask::Object)));
-
         let Token {
             start: _,
             end: _,
@@ -68,18 +66,40 @@ impl JsonParserState {
 
         match token_type {
             TokenType::RCurly => {
-                let last = stack.pop().unwrap();
-                tasks.push(last);
+                let last = stack.pop();
 
-                match stack.last() {
-                    Some(JsonParserTask::Object) => Ok(Self::Object),
-                    Some(JsonParserTask::String { .. }) => {
-                        unreachable!("String should never be present on stack.")
-                    }
-                    None => Ok(Self::WaitingEof),
+                if let Some(obj @ JsonParserTask::Object) = last {
+                    tasks.push(obj);
+                } else {
+                    return Err(JsonParsingErrorType::UnmatchedRCurly);
                 }
+
+                Self::stack_based_next_state(stack)
             }
             _ => unimplemented!(),
+        }
+    }
+
+    fn stack_based_next_state(stack: &[JsonParserTask]) -> Result<Self, JsonParsingErrorType> {
+        match stack.last() {
+            Some(JsonParserTask::Object) => Ok(Self::Object),
+            Some(JsonParserTask::Array) => unimplemented!(),
+            Some(JsonParserTask::String { .. }) => {
+                unreachable!("String should never be present on stack.")
+            }
+            Some(JsonParserTask::Number { .. }) => {
+                unreachable!("Number should never be present on stack.")
+            }
+            Some(JsonParserTask::True) => {
+                unreachable!("True should never be present on stack.")
+            }
+            Some(JsonParserTask::False) => {
+                unreachable!("False should never be present on stack.")
+            }
+            Some(JsonParserTask::Null) => {
+                unreachable!("Null should never be present on stack.")
+            }
+            None => Ok(Self::WaitingEof),
         }
     }
 }

@@ -100,6 +100,11 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                 self.state = Self::seen_f;
                 Ok(None)
             }
+            'n' => {
+                self.token_start_cursor = self.cursor;
+                self.state = Self::seen_n;
+                Ok(None)
+            }
             _ => self.invalid_token(),
         };
 
@@ -325,6 +330,73 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                     start: self.token_start_cursor,
                     end: self.cursor + current_char,
                     token_type: TokenType::False,
+                }))
+            }
+            _ => {
+                self.cursor = self.token_start_cursor;
+                self.invalid_token()
+            }
+        };
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn seen_n(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            return self.unexpected_eof();
+        };
+
+        let res = match current_char {
+            'u' => {
+                self.state = Self::seen_nu;
+                Ok(None)
+            }
+            _ => {
+                self.cursor = self.token_start_cursor;
+                self.invalid_token()
+            }
+        };
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn seen_nu(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            return self.unexpected_eof();
+        };
+
+        let res = match current_char {
+            'l' => {
+                self.state = Self::seen_nul;
+                Ok(None)
+            }
+            _ => {
+                self.cursor = self.token_start_cursor;
+                self.invalid_token()
+            }
+        };
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn seen_nul(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            return self.unexpected_eof();
+        };
+
+        let res = match current_char {
+            'l' => {
+                self.state = Self::start;
+                Ok(Some(Token {
+                    start: self.token_start_cursor,
+                    end: self.cursor + current_char,
+                    token_type: TokenType::Null,
                 }))
             }
             _ => {

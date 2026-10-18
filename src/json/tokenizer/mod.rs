@@ -95,6 +95,11 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                 self.state = Self::seen_t;
                 Ok(None)
             }
+            'f' => {
+                self.token_start_cursor = self.cursor;
+                self.state = Self::seen_f;
+                Ok(None)
+            }
             _ => self.invalid_token(),
         };
 
@@ -232,6 +237,94 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                     start: self.token_start_cursor,
                     end: self.cursor + current_char,
                     token_type: TokenType::True,
+                }))
+            }
+            _ => {
+                self.cursor = self.token_start_cursor;
+                self.invalid_token()
+            }
+        };
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn seen_f(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            return self.unexpected_eof();
+        };
+
+        let res = match current_char {
+            'a' => {
+                self.state = Self::seen_fa;
+                Ok(None)
+            }
+            _ => {
+                self.cursor = self.token_start_cursor;
+                self.invalid_token()
+            }
+        };
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn seen_fa(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            return self.unexpected_eof();
+        };
+
+        let res = match current_char {
+            'l' => {
+                self.state = Self::seen_fal;
+                Ok(None)
+            }
+            _ => {
+                self.cursor = self.token_start_cursor;
+                self.invalid_token()
+            }
+        };
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn seen_fal(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            return self.unexpected_eof();
+        };
+
+        let res = match current_char {
+            's' => {
+                self.state = Self::seen_fals;
+                Ok(None)
+            }
+            _ => {
+                self.cursor = self.token_start_cursor;
+                self.invalid_token()
+            }
+        };
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn seen_fals(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            return self.unexpected_eof();
+        };
+
+        let res = match current_char {
+            'e' => {
+                self.state = Self::start;
+                Ok(Some(Token {
+                    start: self.token_start_cursor,
+                    end: self.cursor + current_char,
+                    token_type: TokenType::False,
                 }))
             }
             _ => {

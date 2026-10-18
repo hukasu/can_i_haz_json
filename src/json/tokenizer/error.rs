@@ -4,9 +4,9 @@ use crate::str_cursor::StrCursor;
 
 #[derive(Debug)]
 pub struct TokenizerError {
-    pub(super) start: StrCursor,
-    pub(super) end: StrCursor,
-    pub(super) error_type: TokenizerErrorType,
+    pub start: StrCursor,
+    pub end: StrCursor,
+    pub error_type: TokenizerErrorType,
 }
 
 #[derive(Debug)]

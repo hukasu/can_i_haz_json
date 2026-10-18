@@ -18,6 +18,8 @@ pub enum JsonParsingErrorType {
     Tokenizer(TokenizerErrorType),
     UnexpectedRCurly,
     UnmatchedRCurly,
+    UnexpectedRBracket,
+    UnmatchedRBracket,
 }
 
 impl Display for JsonParsingError<'_> {
@@ -32,6 +34,12 @@ impl Display for JsonParsingError<'_> {
                 write!(f, "")
             }
             JsonParsingErrorType::UnmatchedRCurly => {
+                write!(f, "")
+            }
+            JsonParsingErrorType::UnexpectedRBracket => {
+                write!(f, "")
+            }
+            JsonParsingErrorType::UnmatchedRBracket => {
                 write!(f, "")
             }
         }

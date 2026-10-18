@@ -8,6 +8,7 @@ use crate::json::{
 pub enum JsonParserState {
     Root,
     Object,
+    Array,
     WaitingEof,
 }
 
@@ -21,6 +22,7 @@ impl JsonParserState {
         match self {
             Self::Root => Self::root(tasks, stack, token),
             Self::Object => Self::object(tasks, stack, token),
+            Self::Array => Self::array(tasks, stack, token),
             Self::WaitingEof => unimplemented!(),
         }
     }
@@ -41,6 +43,12 @@ impl JsonParserState {
                 stack.push(JsonParserTask::Object);
                 Ok(Self::Object)
             }
+            TokenType::RCurly => Err(JsonParsingErrorType::UnexpectedRCurly),
+            TokenType::LBracket => {
+                stack.push(JsonParserTask::Array);
+                Ok(Self::Array)
+            }
+            TokenType::RBracket => Err(JsonParsingErrorType::UnexpectedRBracket),
             TokenType::String => {
                 tasks.push(JsonParserTask::String {
                     start: *start,
@@ -48,7 +56,6 @@ impl JsonParserState {
                 });
                 Ok(Self::WaitingEof)
             }
-            TokenType::RCurly => Err(JsonParsingErrorType::UnexpectedRCurly),
             _ => unimplemented!(),
         }
     }
@@ -72,6 +79,33 @@ impl JsonParserState {
                     tasks.push(obj);
                 } else {
                     return Err(JsonParsingErrorType::UnmatchedRCurly);
+                }
+
+                Self::stack_based_next_state(stack)
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    fn array(
+        tasks: &mut Vec<JsonParserTask>,
+        stack: &mut Vec<JsonParserTask>,
+        token: &Token,
+    ) -> Result<Self, JsonParsingErrorType> {
+        let Token {
+            start: _,
+            end: _,
+            token_type,
+        } = token;
+
+        match token_type {
+            TokenType::RBracket => {
+                let last = stack.pop();
+
+                if let Some(arr @ JsonParserTask::Array) = last {
+                    tasks.push(arr);
+                } else {
+                    return Err(JsonParsingErrorType::UnmatchedRBracket);
                 }
 
                 Self::stack_based_next_state(stack)

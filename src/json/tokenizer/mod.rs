@@ -90,6 +90,11 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                 self.state = Self::string;
                 Ok(None)
             }
+            't' => {
+                self.token_start_cursor = self.cursor;
+                self.state = Self::seen_t;
+                Ok(None)
+            }
             _ => self.invalid_token(),
         };
 
@@ -166,6 +171,73 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             Ok(None)
         } else {
             self.invalid_escaped_character_in_string()
+        };
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn seen_t(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            return self.unexpected_eof();
+        };
+
+        let res = match current_char {
+            'r' => {
+                self.state = Self::seen_tr;
+                Ok(None)
+            }
+            _ => {
+                self.cursor = self.token_start_cursor;
+                self.invalid_token()
+            }
+        };
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn seen_tr(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            return self.unexpected_eof();
+        };
+
+        let res = match current_char {
+            'u' => {
+                self.state = Self::seen_tru;
+                Ok(None)
+            }
+            _ => {
+                self.cursor = self.token_start_cursor;
+                self.invalid_token()
+            }
+        };
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn seen_tru(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            return self.unexpected_eof();
+        };
+
+        let res = match current_char {
+            'e' => {
+                self.state = Self::start;
+                Ok(Some(Token {
+                    start: self.token_start_cursor,
+                    end: self.cursor + current_char,
+                    token_type: TokenType::True,
+                }))
+            }
+            _ => {
+                self.cursor = self.token_start_cursor;
+                self.invalid_token()
+            }
         };
 
         self.cursor += current_char;

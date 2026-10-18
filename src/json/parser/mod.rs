@@ -32,6 +32,7 @@ impl JsonParser {
         let tokens = JsonTokenizer::new(data.chars());
         let mut state = JsonParserState::Root;
         let mut stack = alloc::vec![];
+        let mut tasks = alloc::vec![];
 
         for token in tokens {
             let token = match token {
@@ -47,7 +48,7 @@ impl JsonParser {
             };
 
             trace!("Parsing json token {:?}.", token);
-            match state.process(&mut stack, &token) {
+            match state.process(&mut tasks, &mut stack, &token) {
                 Ok(new_state) => state = new_state,
                 Err(error_type) => {
                     return Err(JsonParsingError {
@@ -60,6 +61,6 @@ impl JsonParser {
             }
         }
 
-        Ok((stack, data))
+        Ok((tasks, data))
     }
 }

@@ -51,6 +51,7 @@ mod tests {
     fn empty_object() {
         let json_data = "{}";
         let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18);
 
         let JsonValue::Object(ref object) = *json else {
             panic!("Json did not have Object root.");
@@ -58,5 +59,75 @@ mod tests {
 
         assert_eq!(object.len(), 0);
         assert!(object.is_empty());
+    }
+
+    #[test]
+    fn empty_array() {
+        let json_data = "[]";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18);
+
+        let JsonValue::Array = *json else {
+            panic!("Json did not have Object root.");
+        };
+    }
+
+    #[test]
+    fn empty_string() {
+        let json_data = "\"\"";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18);
+
+        let JsonValue::String(string) = *json else {
+            panic!("Json did not have String root.");
+        };
+
+        assert_eq!(string, "");
+    }
+
+    #[test]
+    fn zero() {
+        let json_data = "0";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18);
+
+        let JsonValue::Number(number) = *json else {
+            panic!("Json did not have Number root.");
+        };
+
+        assert_eq!(number.parse::<f32>(), Ok(0.0));
+    }
+
+    #[test]
+    fn true_root() {
+        let json_data = "true";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18);
+
+        let JsonValue::True = *json else {
+            panic!("Json did not have True root.");
+        };
+    }
+
+    #[test]
+    fn false_root() {
+        let json_data = "false";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18);
+
+        let JsonValue::False = *json else {
+            panic!("Json did not have False root.");
+        };
+    }
+
+    #[test]
+    fn null_root() {
+        let json_data = "null";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18);
+
+        let JsonValue::Null = *json else {
+            panic!("Json did not have Null root.");
+        };
     }
 }

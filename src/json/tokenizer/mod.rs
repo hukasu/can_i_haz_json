@@ -7,10 +7,10 @@ mod token;
 
 use alloc::vec::Vec;
 
-use crate::{json::tokenizer::error::TokenizerErrorType, str_cursor::StrCursor};
+use crate::str_cursor::StrCursor;
 
 pub use self::{
-    error::TokenizerError,
+    error::{TokenizerError, TokenizerErrorType},
     token::{Token, TokenType},
 };
 

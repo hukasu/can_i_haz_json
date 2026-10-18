@@ -11,7 +11,7 @@ use core::ops::Deref;
 
 use alloc::{borrow::Cow, boxed::Box};
 
-use crate::json::{parser::JsonParser, tokenizer::JsonTokenizer};
+use crate::json::parser::JsonParser;
 
 pub use self::{
     array::JsonArray, error::JsonError, number::JsonNumber, object::JsonObject,
@@ -27,9 +27,7 @@ pub struct Json<'a> {
 impl<'a> Json<'a> {
     /// Build a [`JsonDocument`] from the entire contents.
     pub fn new(data: Cow<'a, str>) -> Result<Self, JsonParsingError> {
-        let tokens = JsonTokenizer::new(data.chars());
-        let compiled = JsonParser::parse(tokens)?;
-        unimplemented!()
+        JsonParser::parse(data)
     }
 }
 

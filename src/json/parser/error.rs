@@ -1,18 +1,21 @@
 use core::{error::Error, fmt::Display};
 
-use crate::json::tokenizer::Token;
+use alloc::borrow::Cow;
+
+use crate::{json::tokenizer::TokenizerErrorType, str_cursor::StrCursor};
 
 /// A failure on the parsing of a JSON
 #[derive(Debug)]
 pub struct JsonParsingError<'a> {
-    pub json: &'a str,
-    pub token: Token,
+    pub json: Cow<'a, str>,
+    pub start: StrCursor,
+    pub end: StrCursor,
     pub error_type: JsonParsingErrorType,
 }
 
 #[derive(Debug)]
 pub enum JsonParsingErrorType {
-    Tokenizer,
+    Tokenizer(TokenizerErrorType),
     UnexpectedRCurly,
 }
 
@@ -21,8 +24,8 @@ impl Display for JsonParsingError<'_> {
         writeln!(f, "Failed to parse JSON.")?;
         writeln!(f)?;
         match self.error_type {
-            JsonParsingErrorType::Tokenizer => {
-                write!(f, "{:?}", self.token)
+            JsonParsingErrorType::Tokenizer(_) => {
+                write!(f, "{:?}:{:?}", self.start, self.end)
             }
             JsonParsingErrorType::UnexpectedRCurly => {
                 write!(f, "")

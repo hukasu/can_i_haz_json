@@ -49,6 +49,8 @@ impl JsonParserState {
                 Ok(Self::Array)
             }
             TokenType::RBracket => Err(JsonParsingErrorType::UnexpectedRBracket),
+            TokenType::Colon => unimplemented!(),
+            TokenType::Comma => unimplemented!(),
             TokenType::String => {
                 tasks.push(JsonParserTask::String {
                     start: *start,
@@ -56,7 +58,14 @@ impl JsonParserState {
                 });
                 Ok(Self::WaitingEof)
             }
-            _ => unimplemented!(),
+            TokenType::Number => unimplemented!(),
+            TokenType::True => {
+                tasks.push(JsonParserTask::True);
+                Ok(Self::WaitingEof)
+            }
+            TokenType::False => unimplemented!(),
+            TokenType::Null => unimplemented!(),
+            TokenType::Eof => unimplemented!(),
         }
     }
 

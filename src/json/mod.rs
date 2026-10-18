@@ -1,5 +1,4 @@
 mod array;
-mod error;
 mod number;
 mod object;
 mod parser;
@@ -14,8 +13,8 @@ use alloc::{borrow::Cow, boxed::Box};
 use crate::json::parser::JsonParser;
 
 pub use self::{
-    array::JsonArray, error::JsonError, number::JsonNumber, object::JsonObject,
-    parser::JsonParsingError, string::JsonString, value::JsonValue,
+    array::JsonArray, number::JsonNumber, object::JsonObject, parser::JsonParsingError,
+    string::JsonString, value::JsonValue,
 };
 
 #[derive(PartialEq, Eq)]
@@ -26,7 +25,7 @@ pub struct Json<'a> {
 
 impl<'a> Json<'a> {
     /// Build a [`JsonDocument`] from the entire contents.
-    pub fn new(data: Cow<'a, str>) -> Result<Self, JsonParsingError> {
+    pub fn new(data: Cow<'a, str>) -> Result<Self, JsonParsingError<'a>> {
         JsonParser::parse(data)
     }
 }

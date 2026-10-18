@@ -79,7 +79,7 @@ pub struct Gltf<'a> {
 }
 
 impl<'a> Gltf<'a> {
-    pub fn new(data: Cow<'a, [u8]>) -> Result<Self, GltfValidationError> {
+    pub fn new(data: Cow<'a, [u8]>) -> Result<Self, GltfValidationError<'a>> {
         // if contents[0] == b'{' {
         //     Self::gltf_new(contents)
         // } else if contents[..4] != GLTF_MAGIC {

@@ -17,6 +17,7 @@ pub struct JsonParsingError<'a> {
 pub enum JsonParsingErrorType {
     Tokenizer(TokenizerErrorType),
     UnexpectedRCurly,
+    UnmatchedRCurly,
 }
 
 impl Display for JsonParsingError<'_> {
@@ -28,6 +29,9 @@ impl Display for JsonParsingError<'_> {
                 write!(f, "{:?}:{:?}", self.start, self.end)
             }
             JsonParsingErrorType::UnexpectedRCurly => {
+                write!(f, "")
+            }
+            JsonParsingErrorType::UnmatchedRCurly => {
                 write!(f, "")
             }
         }

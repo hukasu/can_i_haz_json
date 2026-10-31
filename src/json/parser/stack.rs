@@ -1,4 +1,11 @@
+use alloc::vec::Vec;
+
 pub enum JsonParserStack {
-    Object(usize),
-    Array(usize),
+    Object {
+        placeholder: usize,
+    },
+    Array {
+        placeholder: usize,
+        values: Vec<usize>,
+    },
 }

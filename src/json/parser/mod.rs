@@ -93,7 +93,7 @@ impl JsonParser {
                     data_cursor[0] = 0;
                     data_cursor = &mut data_cursor[0x18..];
                 }
-                JsonParserTask::Array => {
+                JsonParserTask::Array { values } => {
                     data_cursor[0] = 1;
                     data_cursor = &mut data_cursor[0x18..];
                 }
@@ -141,7 +141,7 @@ impl JsonParser {
         for task in tasks {
             let extra = match task {
                 JsonParserTask::Object => 0,
-                JsonParserTask::Array => 0,
+                JsonParserTask::Array { values } => values.len() * POINTER_WIDTH,
                 _ => 0,
             };
 

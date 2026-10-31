@@ -1,9 +1,11 @@
+use alloc::vec::Vec;
+
 use crate::str_cursor::StrCursor;
 
 pub enum JsonParserTask {
     Placeholder,
     Object,
-    Array,
+    Array { values: Vec<usize> },
     String { start: StrCursor, end: StrCursor },
     Number { start: StrCursor, end: StrCursor },
     True,

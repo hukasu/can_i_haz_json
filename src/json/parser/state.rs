@@ -44,14 +44,19 @@ impl JsonParserState {
             TokenType::LCurly => {
                 let position = tasks.len();
                 tasks.push(JsonParserTask::Placeholder);
-                stack.push(JsonParserStack::Object(position));
+                stack.push(JsonParserStack::Object {
+                    placeholder: position,
+                });
                 Ok(Self::Object)
             }
             TokenType::RCurly => Err(JsonParsingErrorType::UnexpectedRCurly),
             TokenType::LBracket => {
                 let position = tasks.len();
                 tasks.push(JsonParserTask::Placeholder);
-                stack.push(JsonParserStack::Array(position));
+                stack.push(JsonParserStack::Array {
+                    placeholder: position,
+                    values: Vec::new(),
+                });
                 Ok(Self::Array)
             }
             TokenType::RBracket => Err(JsonParsingErrorType::UnexpectedRBracket),
@@ -96,8 +101,8 @@ impl JsonParserState {
             TokenType::RCurly => {
                 let last = stack.pop();
 
-                if let Some(JsonParserStack::Object(position)) = last {
-                    tasks[position] = JsonParserTask::Object;
+                if let Some(JsonParserStack::Object { placeholder }) = last {
+                    tasks[placeholder] = JsonParserTask::Object;
                 } else {
                     return Err(JsonParsingErrorType::UnmatchedRCurly);
                 }
@@ -123,14 +128,21 @@ impl JsonParserState {
             TokenType::LBracket => {
                 let position = tasks.len();
                 tasks.push(JsonParserTask::Placeholder);
-                stack.push(JsonParserStack::Array(position));
+                stack.push(JsonParserStack::Array {
+                    placeholder: position,
+                    values: Vec::new(),
+                });
                 Ok(Self::Array)
             }
             TokenType::RBracket => {
                 let last = stack.pop();
 
-                if let Some(JsonParserStack::Array(position)) = last {
-                    tasks[position] = JsonParserTask::Array;
+                if let Some(JsonParserStack::Array {
+                    placeholder,
+                    values,
+                }) = last
+                {
+                    tasks[placeholder] = JsonParserTask::Array { values };
                 } else {
                     return Err(JsonParsingErrorType::UnmatchedRBracket);
                 }
@@ -176,8 +188,12 @@ impl JsonParserState {
             TokenType::RBracket => {
                 let last = stack.pop();
 
-                if let Some(JsonParserStack::Array(position)) = last {
-                    tasks[position] = JsonParserTask::Array;
+                if let Some(JsonParserStack::Array {
+                    placeholder,
+                    values,
+                }) = last
+                {
+                    tasks[placeholder] = JsonParserTask::Array { values };
                 } else {
                     return Err(JsonParsingErrorType::UnmatchedRBracket);
                 }
@@ -191,8 +207,8 @@ impl JsonParserState {
 
     fn stack_based_next_state(stack: &[JsonParserStack]) -> Result<Self, JsonParsingErrorType> {
         match stack.last() {
-            Some(JsonParserStack::Object(_)) => Ok(Self::Object),
-            Some(JsonParserStack::Array(_)) => Ok(Self::ArraySeparator),
+            Some(JsonParserStack::Object { .. }) => Ok(Self::Object),
+            Some(JsonParserStack::Array { .. }) => Ok(Self::ArraySeparator),
             None => Ok(Self::WaitingEof),
         }
     }

@@ -36,7 +36,7 @@ impl JsonParserState {
             start,
             end,
             token_type,
-        } = token;
+        } = *token;
 
         match token_type {
             TokenType::LCurly => {
@@ -52,17 +52,11 @@ impl JsonParserState {
             TokenType::Colon => unimplemented!(),
             TokenType::Comma => unimplemented!(),
             TokenType::String => {
-                tasks.push(JsonParserTask::String {
-                    start: *start,
-                    end: *end,
-                });
+                tasks.push(JsonParserTask::String { start, end });
                 Ok(Self::WaitingEof)
             }
             TokenType::Number => {
-                tasks.push(JsonParserTask::Number {
-                    start: *start,
-                    end: *end,
-                });
+                tasks.push(JsonParserTask::Number { start, end });
                 Ok(Self::WaitingEof)
             }
             TokenType::True => {

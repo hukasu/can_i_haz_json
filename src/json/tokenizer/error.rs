@@ -14,6 +14,9 @@ pub enum TokenizerErrorType {
     InvalidToken,
     InvalidCharacterInString,
     InvalidEscapedCharacterInString,
+    InvalidDigitInNumber,
+    DigitAfterZero,
+    NoDigitAfterFraction,
     UnexpectedEof,
 }
 
@@ -38,6 +41,27 @@ impl Display for TokenizerError {
                 write!(
                     f,
                     "Invalid escaped character in string on position {}:{} (bytes {:?}).",
+                    self.start.line, self.start.column, self.start.byte,
+                )
+            }
+            TokenizerErrorType::InvalidDigitInNumber => {
+                write!(
+                    f,
+                    "Invalid digit in number at position {}:{} (bytes {:?}).",
+                    self.start.line, self.start.column, self.start.byte,
+                )
+            }
+            TokenizerErrorType::DigitAfterZero => {
+                write!(
+                    f,
+                    "Invalid digit after a zero at position {}:{} (bytes {:?}).",
+                    self.start.line, self.start.column, self.start.byte,
+                )
+            }
+            TokenizerErrorType::NoDigitAfterFraction => {
+                write!(
+                    f,
+                    "No digits after fraction at position {}:{} (bytes {:?}).",
                     self.start.line, self.start.column, self.start.byte,
                 )
             }

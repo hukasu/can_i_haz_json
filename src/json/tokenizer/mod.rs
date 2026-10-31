@@ -55,8 +55,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
         };
 
         let res = match current_char {
-            '\u{0020}' | '\u{000D}' | '\u{0009}' => Ok(None),
-            '\u{000A}' => Ok(None),
+            '\u{0020}' | '\u{000A}' | '\u{000D}' | '\u{0009}' => Ok(None),
             '{' => Ok(Some(Token {
                 start: self.cursor,
                 end: self.cursor + current_char,
@@ -87,6 +86,16 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                 end: self.cursor + current_char,
                 token_type: TokenType::Colon,
             })),
+            '0' => {
+                self.token_start_cursor = self.cursor;
+                self.state = Self::seen_zero;
+                Ok(None)
+            }
+            '1'..='9' | '-' => {
+                self.token_start_cursor = self.cursor;
+                self.state = Self::number;
+                Ok(None)
+            }
             '"' => {
                 self.token_start_cursor = self.cursor;
                 self.state = Self::string;
@@ -183,6 +192,134 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             Ok(None)
         } else {
             self.invalid_escaped_character_in_string()
+        };
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn seen_zero(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            return self.eof();
+        };
+
+        let res = match current_char {
+            '0'..='9' => self.digit_after_zero(),
+            '.' => {
+                self.state = Self::seen_fraction;
+                Ok(None)
+            }
+            ',' => {
+                self.state = Self::start;
+                self.stored_token = Some(Token {
+                    start: self.cursor,
+                    end: self.cursor + current_char,
+                    token_type: TokenType::Comma,
+                });
+                Ok(Some(Token {
+                    start: self.token_start_cursor,
+                    end: self.cursor,
+                    token_type: TokenType::Number,
+                }))
+            }
+            '\u{0020}' | '\u{000A}' | '\u{000D}' | '\u{0009}' => Ok(Some(Token {
+                start: self.token_start_cursor,
+                end: self.cursor,
+                token_type: TokenType::Number,
+            })),
+            _ => self.invalid_character_in_string(),
+        };
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn number(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            return self.eof();
+        };
+
+        let res = match current_char {
+            '0'..='9' => Ok(None),
+            '.' => {
+                self.state = Self::seen_fraction;
+                Ok(None)
+            }
+            ',' => {
+                self.state = Self::start;
+                self.stored_token = Some(Token {
+                    start: self.cursor,
+                    end: self.cursor + current_char,
+                    token_type: TokenType::Comma,
+                });
+                Ok(Some(Token {
+                    start: self.token_start_cursor,
+                    end: self.cursor,
+                    token_type: TokenType::Number,
+                }))
+            }
+            '\u{0020}' | '\u{000A}' | '\u{000D}' | '\u{0009}' => Ok(Some(Token {
+                start: self.token_start_cursor,
+                end: self.cursor,
+                token_type: TokenType::Number,
+            })),
+            _ => self.invalid_digit_in_number(),
+        };
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn seen_fraction(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            return self.unexpected_eof();
+        };
+
+        let res = match current_char {
+            '0'..='9' => {
+                self.state = Self::fraction;
+                Ok(None)
+            }
+            ',' | 'e' | 'E' | '\u{0020}' | '\u{000A}' | '\u{000D}' | '\u{0009}' => {
+                self.no_digits_after_fraction()
+            }
+            _ => self.invalid_digit_in_number(),
+        };
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn fraction(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            return self.eof();
+        };
+
+        let res = match current_char {
+            '0'..='9' => Ok(None),
+            ',' => {
+                self.state = Self::start;
+                self.stored_token = Some(Token {
+                    start: self.cursor,
+                    end: self.cursor + current_char,
+                    token_type: TokenType::Comma,
+                });
+                Ok(Some(Token {
+                    start: self.token_start_cursor,
+                    end: self.cursor,
+                    token_type: TokenType::Number,
+                }))
+            }
+            '\u{0020}' | '\u{000A}' | '\u{000D}' | '\u{0009}' => Ok(Some(Token {
+                start: self.token_start_cursor,
+                end: self.cursor,
+                token_type: TokenType::Number,
+            })),
+            _ => self.invalid_digit_in_number(),
         };
 
         self.cursor += current_char;
@@ -454,6 +591,33 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             start: self.token_start_cursor,
             end: self.cursor,
             error_type: TokenizerErrorType::InvalidEscapedCharacterInString,
+        })
+    }
+
+    #[inline(always)]
+    fn invalid_digit_in_number(&self) -> Result<Option<Token>, TokenizerError> {
+        Err(TokenizerError {
+            start: self.token_start_cursor,
+            end: self.cursor,
+            error_type: TokenizerErrorType::InvalidDigitInNumber,
+        })
+    }
+
+    #[inline(always)]
+    fn digit_after_zero(&self) -> Result<Option<Token>, TokenizerError> {
+        Err(TokenizerError {
+            start: self.token_start_cursor,
+            end: self.cursor,
+            error_type: TokenizerErrorType::DigitAfterZero,
+        })
+    }
+
+    #[inline(always)]
+    fn no_digits_after_fraction(&self) -> Result<Option<Token>, TokenizerError> {
+        Err(TokenizerError {
+            start: self.token_start_cursor,
+            end: self.cursor,
+            error_type: TokenizerErrorType::NoDigitAfterFraction,
         })
     }
 }

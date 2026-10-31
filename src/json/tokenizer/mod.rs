@@ -48,10 +48,10 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     /// Processing the string in search of a token
     fn start(&mut self) -> Result<Option<Token>, TokenizerError> {
         if self.fused {
-            return self.eof();
+            return Ok(Some(self.eof()));
         }
         let Some(current_char) = self.iterator.next() else {
-            return self.eof();
+            return Ok(Some(self.eof()));
         };
 
         let res = match current_char {
@@ -201,7 +201,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
 
     fn seen_zero(&mut self) -> Result<Option<Token>, TokenizerError> {
         let Some(current_char) = self.iterator.next() else {
-            return self.eof();
+            return Ok(Some(self.eof()));
         };
 
         let res = match current_char {
@@ -238,7 +238,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
 
     fn number(&mut self) -> Result<Option<Token>, TokenizerError> {
         let Some(current_char) = self.iterator.next() else {
-            return self.eof();
+            return Ok(Some(self.eof()));
         };
 
         let res = match current_char {
@@ -296,7 +296,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
 
     fn fraction(&mut self) -> Result<Option<Token>, TokenizerError> {
         let Some(current_char) = self.iterator.next() else {
-            return self.eof();
+            return Ok(Some(self.eof()));
         };
 
         let res = match current_char {
@@ -550,12 +550,12 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     }
 
     #[inline(always)]
-    fn eof(&self) -> Result<Option<Token>, TokenizerError> {
-        Ok(Some(Token {
+    fn eof(&self) -> Token {
+        Token {
             start: self.cursor,
             end: self.cursor,
             token_type: TokenType::Eof,
-        }))
+        }
     }
 
     #[inline(always)]

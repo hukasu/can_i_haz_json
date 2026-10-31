@@ -70,6 +70,15 @@ use alloc::borrow::Cow;
 
 pub use validation_error::GltfValidationError;
 
+#[cfg(target_pointer_width = "32")]
+const POINTER_WIDTH: usize = 4;
+#[cfg(target_pointer_width = "64")]
+const POINTER_WIDTH: usize = 8;
+
+const FIRST_OFFSET: usize = POINTER_WIDTH;
+const SECOND_OFFSET: usize = FIRST_OFFSET * 2;
+const THIRD_OFFSET: usize = FIRST_OFFSET * 3;
+
 const GLTF_MAGIC: [u8; 4] = [0x67, 0x6C, 0x54, 0x46];
 const GLTF_JSON_CHUNK_TYPE: u32 = 0x4E4F534A;
 const GLTF_BIN_CHUNK_TYPE: u32 = 0x004E4942;

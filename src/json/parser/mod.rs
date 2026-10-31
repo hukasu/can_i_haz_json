@@ -7,6 +7,7 @@ use alloc::{borrow::Cow, boxed::Box, vec::Vec};
 use log::*;
 
 use crate::{
+    FIRST_OFFSET, POINTER_WIDTH, SECOND_OFFSET, THIRD_OFFSET,
     json::{
         Json, JsonValue,
         parser::{error::JsonParsingErrorType, state::JsonParserState, tasks::JsonParserTask},
@@ -16,14 +17,6 @@ use crate::{
 };
 
 pub use error::JsonParsingError;
-
-#[cfg(target_pointer_width = "32")]
-const POINTER_OFFSET: usize = 4;
-#[cfg(target_pointer_width = "64")]
-const POINTER_OFFSET: usize = 8;
-
-const TWO_POINTER_OFFSET: usize = POINTER_OFFSET * 2;
-const THREE_POINTER_OFFSET: usize = POINTER_OFFSET * 3;
 
 pub struct JsonParser;
 
@@ -109,10 +102,9 @@ impl JsonParser {
                     let offset = start.byte + 1;
 
                     data_cursor[0] = 2;
-                    data_cursor[POINTER_OFFSET..TWO_POINTER_OFFSET]
+                    data_cursor[FIRST_OFFSET..SECOND_OFFSET]
                         .copy_from_slice(&unsafe { base.byte_add(offset) }.addr().to_ne_bytes());
-                    data_cursor[TWO_POINTER_OFFSET..THREE_POINTER_OFFSET]
-                        .copy_from_slice(&len.to_ne_bytes());
+                    data_cursor[SECOND_OFFSET..THIRD_OFFSET].copy_from_slice(&len.to_ne_bytes());
                     data_cursor = &mut data_cursor[0x18..];
                 }
                 JsonParserTask::Number { start, end } => {
@@ -120,10 +112,9 @@ impl JsonParser {
                     let offset = start.byte;
 
                     data_cursor[0] = 3;
-                    data_cursor[POINTER_OFFSET..TWO_POINTER_OFFSET]
+                    data_cursor[FIRST_OFFSET..SECOND_OFFSET]
                         .copy_from_slice(&unsafe { base.byte_add(offset) }.addr().to_ne_bytes());
-                    data_cursor[TWO_POINTER_OFFSET..THREE_POINTER_OFFSET]
-                        .copy_from_slice(&len.to_ne_bytes());
+                    data_cursor[SECOND_OFFSET..THIRD_OFFSET].copy_from_slice(&len.to_ne_bytes());
                     data_cursor = &mut data_cursor[0x18..];
                 }
                 JsonParserTask::True => {

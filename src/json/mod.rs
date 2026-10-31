@@ -45,6 +45,8 @@ impl<'a> Deref for Json<'a> {
 
 #[cfg(test)]
 mod tests {
+    use crate::POINTER_WIDTH;
+
     use super::*;
 
     #[test]
@@ -71,6 +73,58 @@ mod tests {
             panic!("Json did not have Array root.");
         };
         assert!(values.is_empty())
+    }
+
+    #[test]
+    fn populated_array() {
+        let json_data = "[[\"inner\"], 0, \"hello\", true, false, null]";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18 * 8 + 7 * POINTER_WIDTH);
+
+        let JsonValue::Array { values } = *json else {
+            panic!("Json did not have Array root.");
+        };
+        assert_eq!(values.len(), 6);
+
+        let [array, number, string, r#true, r#false, null] = values else {
+            panic!("Could not destructure Array values.");
+        };
+
+        let JsonValue::Array { values } = *array else {
+            panic!("Value did not have Array type.");
+        };
+        assert_eq!(values.len(), 1);
+
+        let [inner_string] = values else {
+            panic!("Could not destructure inner Array values.");
+        };
+
+        let JsonValue::String(inner_string) = inner_string else {
+            panic!("Inner value did not have String type.");
+        };
+        assert_eq!(*inner_string, "inner");
+
+        let JsonValue::Number(number) = number else {
+            panic!("Value did not have Number type.");
+        };
+        assert_eq!(*number, "0");
+
+        let JsonValue::String(string) = string else {
+            panic!("Value did not have String type.");
+        };
+        assert_eq!(*string, "hello");
+
+        let JsonValue::True = r#true else {
+            panic!("Value did not have True type.");
+        };
+
+        let JsonValue::False = r#false else {
+            panic!("Value did not have False type.");
+        };
+
+        let JsonValue::Null = null else {
+            panic!("Value did not have Null type.");
+        };
     }
 
     #[test]

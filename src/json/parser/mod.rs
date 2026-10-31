@@ -76,15 +76,35 @@ impl JsonParser {
         Ok((tasks, data))
     }
 
-    fn compile_json(data: &str, tasks: Vec<JsonParserTask>) -> Box<[u8]> {
-        let base = data.as_ptr();
-
+    fn compile_json(json_data: &str, tasks: Vec<JsonParserTask>) -> Box<[u8]> {
         let size = Self::calculate_size_of_compiled_json(&tasks);
 
         let mut data = Vec::from_iter([0u8].iter().cycle().copied().take(size));
 
+        let json_base = json_data.as_ptr();
+        let data_base = data.as_mut_ptr().cast::<JsonValue>();
+
+        let mut deferred_arrays = Vec::new();
+
         let mut data_cursor = data.as_mut_slice();
-        for task in tasks {
+        data_cursor = Self::compile_tasks(json_base, data_cursor, tasks, &mut deferred_arrays);
+        data_cursor = Self::compile_arrays(data_base, data_cursor, deferred_arrays);
+        assert!(
+            data_cursor.is_empty(),
+            "There was {} bytes left on compiled json buffer.",
+            data_cursor.len()
+        );
+
+        data.into_boxed_slice()
+    }
+
+    fn compile_tasks<'a>(
+        json_base: *const u8,
+        mut data_cursor: &'a mut [u8],
+        tasks: Vec<JsonParserTask>,
+        deferred_arrays: &mut Vec<(usize, Vec<usize>)>,
+    ) -> &'a mut [u8] {
+        for (i, task) in tasks.into_iter().enumerate() {
             match task {
                 JsonParserTask::Placeholder => {
                     unreachable!("Placeholder tasks should not reach compilation.");
@@ -94,7 +114,7 @@ impl JsonParser {
                     data_cursor = &mut data_cursor[0x18..];
                 }
                 JsonParserTask::Array { values } => {
-                    data_cursor[0] = 1;
+                    deferred_arrays.push((i, values));
                     data_cursor = &mut data_cursor[0x18..];
                 }
                 JsonParserTask::String { start, end } => {
@@ -102,8 +122,9 @@ impl JsonParser {
                     let offset = start.byte + 1;
 
                     data_cursor[0] = 2;
-                    data_cursor[FIRST_OFFSET..SECOND_OFFSET]
-                        .copy_from_slice(&unsafe { base.byte_add(offset) }.addr().to_ne_bytes());
+                    data_cursor[FIRST_OFFSET..SECOND_OFFSET].copy_from_slice(
+                        &unsafe { json_base.byte_add(offset) }.addr().to_ne_bytes(),
+                    );
                     data_cursor[SECOND_OFFSET..THIRD_OFFSET].copy_from_slice(&len.to_ne_bytes());
                     data_cursor = &mut data_cursor[0x18..];
                 }
@@ -112,8 +133,9 @@ impl JsonParser {
                     let offset = start.byte;
 
                     data_cursor[0] = 3;
-                    data_cursor[FIRST_OFFSET..SECOND_OFFSET]
-                        .copy_from_slice(&unsafe { base.byte_add(offset) }.addr().to_ne_bytes());
+                    data_cursor[FIRST_OFFSET..SECOND_OFFSET].copy_from_slice(
+                        &unsafe { json_base.byte_add(offset) }.addr().to_ne_bytes(),
+                    );
                     data_cursor[SECOND_OFFSET..THIRD_OFFSET].copy_from_slice(&len.to_ne_bytes());
                     data_cursor = &mut data_cursor[0x18..];
                 }
@@ -131,8 +153,34 @@ impl JsonParser {
                 }
             }
         }
+        data_cursor
+    }
 
-        data.into_boxed_slice()
+    fn compile_arrays<'a>(
+        data_base: *mut JsonValue,
+        mut data_cursor: &'a mut [u8],
+        deferred_arrays: Vec<(usize, Vec<usize>)>,
+    ) -> &'a mut [u8] {
+        for (index, deferred_array) in deferred_arrays {
+            let array_base = data_cursor.as_ptr().cast();
+
+            unsafe {
+                data_base.add(index).write(JsonValue::Array {
+                    values: core::slice::from_raw_parts(array_base, deferred_array.len()),
+                })
+            };
+
+            for value in deferred_array {
+                unsafe {
+                    data_cursor
+                        .as_mut_ptr()
+                        .cast::<*const JsonValue>()
+                        .write(data_base.add(value))
+                };
+                data_cursor = &mut data_cursor[POINTER_WIDTH..];
+            }
+        }
+        data_cursor
     }
 
     fn calculate_size_of_compiled_json(tasks: &[JsonParserTask]) -> usize {

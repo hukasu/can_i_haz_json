@@ -9,6 +9,7 @@ pub enum JsonParserState {
     Root,
     Object,
     Array,
+    ArraySeparator,
     WaitingEof,
 }
 
@@ -23,6 +24,7 @@ impl JsonParserState {
             Self::Root => Self::root(tasks, stack, token),
             Self::Object => Self::object(tasks, stack, token),
             Self::Array => Self::array(tasks, stack, token),
+            Self::ArraySeparator => Self::array_separator(tasks, stack, token),
             Self::WaitingEof => unimplemented!(),
         }
     }
@@ -108,10 +110,10 @@ impl JsonParserState {
         token: &Token,
     ) -> Result<Self, JsonParsingErrorType> {
         let Token {
-            start: _,
-            end: _,
+            start,
+            end,
             token_type,
-        } = token;
+        } = *token;
 
         match token_type {
             TokenType::RBracket => {
@@ -125,6 +127,43 @@ impl JsonParserState {
 
                 Self::stack_based_next_state(stack)
             }
+            TokenType::String => {
+                tasks.push(JsonParserTask::String { start, end });
+                Ok(Self::ArraySeparator)
+            }
+            TokenType::Number => {
+                tasks.push(JsonParserTask::Number { start, end });
+                Ok(Self::ArraySeparator)
+            }
+            TokenType::True => {
+                tasks.push(JsonParserTask::True);
+                Ok(Self::ArraySeparator)
+            }
+            TokenType::False => {
+                tasks.push(JsonParserTask::False);
+                Ok(Self::ArraySeparator)
+            }
+            TokenType::Null => {
+                tasks.push(JsonParserTask::Null);
+                Ok(Self::ArraySeparator)
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    fn array_separator(
+        _tasks: &mut Vec<JsonParserTask>,
+        _stack: &mut Vec<JsonParserTask>,
+        token: &Token,
+    ) -> Result<Self, JsonParsingErrorType> {
+        let Token {
+            start: _,
+            end: _,
+            token_type,
+        } = token;
+
+        match token_type {
+            TokenType::Comma => Ok(JsonParserState::Array),
             _ => unimplemented!(),
         }
     }

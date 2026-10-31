@@ -13,13 +13,21 @@ use crate::json::{
 
 pub use error::JsonParsingError;
 
+#[cfg(target_pointer_width = "32")]
+const POINTER_OFFSET: usize = 4;
+#[cfg(target_pointer_width = "64")]
+const POINTER_OFFSET: usize = 8;
+
+const TWO_POINTER_OFFSET: usize = POINTER_OFFSET * 2;
+const THREE_POINTER_OFFSET: usize = POINTER_OFFSET * 3;
+
 pub struct JsonParser;
 
 impl JsonParser {
     pub fn parse<'a>(data: Cow<'a, str>) -> Result<Json<'a>, JsonParsingError<'a>> {
         trace!("Parsing json.");
         let (tasks, data) = Self::parse_json(data)?;
-        let compiled = Self::compile_json(tasks);
+        let compiled = Self::compile_json(&data, tasks);
 
         Ok(Json { data, compiled })
     }
@@ -62,7 +70,9 @@ impl JsonParser {
         Ok((tasks, data))
     }
 
-    fn compile_json(tasks: Vec<JsonParserTask>) -> Box<[u8]> {
+    fn compile_json(data: &str, tasks: Vec<JsonParserTask>) -> Box<[u8]> {
+        let base = data.as_ptr();
+
         let size = Self::calculate_size_of_compiled_json(&tasks);
 
         let mut data = Vec::from_iter([0u8].iter().cycle().copied().take(size));
@@ -78,12 +88,26 @@ impl JsonParser {
                     data_cursor[0] = 1;
                     data_cursor = &mut data_cursor[0x18..];
                 }
-                JsonParserTask::String { .. } => {
+                JsonParserTask::String { start, end } => {
+                    let len = end.byte - start.byte - 2;
+                    let offset = start.byte + 1;
+
                     data_cursor[0] = 2;
+                    data_cursor[POINTER_OFFSET..TWO_POINTER_OFFSET]
+                        .copy_from_slice(&unsafe { base.byte_add(offset) }.addr().to_ne_bytes());
+                    data_cursor[TWO_POINTER_OFFSET..THREE_POINTER_OFFSET]
+                        .copy_from_slice(&len.to_ne_bytes());
                     data_cursor = &mut data_cursor[0x18..];
                 }
-                JsonParserTask::Number { .. } => {
+                JsonParserTask::Number { start, end } => {
+                    let len = end.byte - start.byte;
+                    let offset = start.byte;
+
                     data_cursor[0] = 3;
+                    data_cursor[POINTER_OFFSET..TWO_POINTER_OFFSET]
+                        .copy_from_slice(&unsafe { base.byte_add(offset) }.addr().to_ne_bytes());
+                    data_cursor[TWO_POINTER_OFFSET..THREE_POINTER_OFFSET]
+                        .copy_from_slice(&len.to_ne_bytes());
                     data_cursor = &mut data_cursor[0x18..];
                 }
                 JsonParserTask::True => {

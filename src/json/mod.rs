@@ -68,7 +68,7 @@ mod tests {
         assert_eq!(json.compiled.len(), 0x18);
 
         let JsonValue::Array = *json else {
-            panic!("Json did not have Object root.");
+            panic!("Json did not have Array root.");
         };
     }
 

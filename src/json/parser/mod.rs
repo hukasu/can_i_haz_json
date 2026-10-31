@@ -5,10 +5,13 @@ mod tasks;
 use alloc::{borrow::Cow, boxed::Box, vec::Vec};
 use log::*;
 
-use crate::json::{
-    Json, JsonValue,
-    parser::{error::JsonParsingErrorType, state::JsonParserState, tasks::JsonParserTask},
-    tokenizer::JsonTokenizer,
+use crate::{
+    json::{
+        Json, JsonValue,
+        parser::{error::JsonParsingErrorType, state::JsonParserState, tasks::JsonParserTask},
+        tokenizer::JsonTokenizer,
+    },
+    str_cursor::StrCursor,
 };
 
 pub use error::JsonParsingError;
@@ -27,9 +30,18 @@ impl JsonParser {
     pub fn parse<'a>(data: Cow<'a, str>) -> Result<Json<'a>, JsonParsingError<'a>> {
         trace!("Parsing json.");
         let (tasks, data) = Self::parse_json(data)?;
-        let compiled = Self::compile_json(&data, tasks);
 
-        Ok(Json { data, compiled })
+        if tasks.is_empty() {
+            Err(JsonParsingError {
+                json: data,
+                start: StrCursor::default(),
+                end: StrCursor::default(),
+                error_type: JsonParsingErrorType::EmptyBody,
+            })
+        } else {
+            let compiled = Self::compile_json(&data, tasks);
+            Ok(Json { data, compiled })
+        }
     }
 
     fn parse_json<'a>(

@@ -1,8 +1,5 @@
-mod array;
-mod number;
 mod object;
 mod parser;
-mod string;
 mod tokenizer;
 mod value;
 
@@ -12,10 +9,7 @@ use alloc::{borrow::Cow, boxed::Box};
 
 use crate::json::parser::JsonParser;
 
-pub use self::{
-    array::JsonArray, number::JsonNumber, object::JsonObject, parser::JsonParsingError,
-    string::JsonString, value::JsonValue,
-};
+pub use self::{object::JsonObject, parser::JsonParsingError, value::JsonValue};
 
 #[derive(PartialEq, Eq)]
 pub struct Json<'a> {

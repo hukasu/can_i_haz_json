@@ -23,6 +23,7 @@ pub struct JsonTokenizer<T: Iterator<Item = char>> {
     cursor: StrCursor,
     token_start_cursor: StrCursor,
     state: State<T>,
+    stored_token: Option<Token>,
     fused: bool,
 }
 
@@ -33,6 +34,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             cursor: StrCursor::default(),
             token_start_cursor: StrCursor::default(),
             state: Self::start,
+            stored_token: None,
             fused: false,
         }
     }
@@ -461,6 +463,9 @@ impl<T: Iterator<Item = char>> Iterator for JsonTokenizer<T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
+            if let Some(token) = self.stored_token.take() {
+                break Some(Ok(token));
+            }
             match (self.state)(self) {
                 Ok(Some(token)) => {
                     if token.token_type == TokenType::Eof {

@@ -1,5 +1,3 @@
-#![expect(dead_code)]
-
 mod error;
 #[cfg(test)]
 mod tests;

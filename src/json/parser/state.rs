@@ -126,7 +126,16 @@ impl JsonParserState {
 
         match token_type {
             TokenType::LBracket => {
+                let Some(JsonParserStack::Array {
+                    placeholder: _,
+                    values,
+                }) = stack.last_mut()
+                else {
+                    todo!();
+                };
+
                 let position = tasks.len();
+                values.push(position);
                 tasks.push(JsonParserTask::Placeholder);
                 stack.push(JsonParserStack::Array {
                     placeholder: position,
@@ -150,22 +159,72 @@ impl JsonParserState {
                 Self::stack_based_next_state(stack)
             }
             TokenType::String => {
+                let Some(JsonParserStack::Array {
+                    placeholder: _,
+                    values,
+                }) = stack.last_mut()
+                else {
+                    todo!();
+                };
+
+                let position = tasks.len();
+                values.push(position);
                 tasks.push(JsonParserTask::String { start, end });
                 Ok(Self::ArraySeparator)
             }
             TokenType::Number => {
+                let Some(JsonParserStack::Array {
+                    placeholder: _,
+                    values,
+                }) = stack.last_mut()
+                else {
+                    todo!();
+                };
+
+                let position = tasks.len();
+                values.push(position);
                 tasks.push(JsonParserTask::Number { start, end });
                 Ok(Self::ArraySeparator)
             }
             TokenType::True => {
+                let Some(JsonParserStack::Array {
+                    placeholder: _,
+                    values,
+                }) = stack.last_mut()
+                else {
+                    todo!();
+                };
+
+                let position = tasks.len();
+                values.push(position);
                 tasks.push(JsonParserTask::True);
                 Ok(Self::ArraySeparator)
             }
             TokenType::False => {
+                let Some(JsonParserStack::Array {
+                    placeholder: _,
+                    values,
+                }) = stack.last_mut()
+                else {
+                    todo!();
+                };
+
+                let position = tasks.len();
+                values.push(position);
                 tasks.push(JsonParserTask::False);
                 Ok(Self::ArraySeparator)
             }
             TokenType::Null => {
+                let Some(JsonParserStack::Array {
+                    placeholder: _,
+                    values,
+                }) = stack.last_mut()
+                else {
+                    todo!();
+                };
+
+                let position = tasks.len();
+                values.push(position);
                 tasks.push(JsonParserTask::Null);
                 Ok(Self::ArraySeparator)
             }

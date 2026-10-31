@@ -440,7 +440,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn invalid_character_in_string(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            start: self.cursor,
+            start: self.token_start_cursor,
             end: self.cursor,
             error_type: TokenizerErrorType::InvalidCharacterInString,
         })
@@ -449,7 +449,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
     #[inline(always)]
     fn invalid_escaped_character_in_string(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
-            start: self.cursor,
+            start: self.token_start_cursor,
             end: self.cursor,
             error_type: TokenizerErrorType::InvalidEscapedCharacterInString,
         })

@@ -1,4 +1,5 @@
 mod error;
+mod stack;
 mod state;
 mod tasks;
 
@@ -92,6 +93,9 @@ impl JsonParser {
         let mut data_cursor = data.as_mut_slice();
         for task in tasks {
             match task {
+                JsonParserTask::Placeholder => {
+                    unreachable!("Placeholder tasks should not reach compilation.");
+                }
                 JsonParserTask::Object => {
                     data_cursor[0] = 0;
                     data_cursor = &mut data_cursor[0x18..];

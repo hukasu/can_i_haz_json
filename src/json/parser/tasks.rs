@@ -1,6 +1,7 @@
 use crate::str_cursor::StrCursor;
 
 pub enum JsonParserTask {
+    Placeholder,
     Object,
     Array,
     String { start: StrCursor, end: StrCursor },

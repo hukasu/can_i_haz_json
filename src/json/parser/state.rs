@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 
 use crate::json::{
-    parser::{error::JsonParsingErrorType, tasks::JsonParserTask},
+    parser::{error::JsonParsingErrorType, stack::JsonParserStack, tasks::JsonParserTask},
     tokenizer::{Token, TokenType},
 };
 
@@ -17,7 +17,7 @@ impl JsonParserState {
     pub fn process(
         &self,
         tasks: &mut Vec<JsonParserTask>,
-        stack: &mut Vec<JsonParserTask>,
+        stack: &mut Vec<JsonParserStack>,
         token: &Token,
     ) -> Result<Self, JsonParsingErrorType> {
         match self {
@@ -31,7 +31,7 @@ impl JsonParserState {
 
     fn root(
         tasks: &mut Vec<JsonParserTask>,
-        stack: &mut Vec<JsonParserTask>,
+        stack: &mut Vec<JsonParserStack>,
         token: &Token,
     ) -> Result<Self, JsonParsingErrorType> {
         let Token {
@@ -42,12 +42,16 @@ impl JsonParserState {
 
         match token_type {
             TokenType::LCurly => {
-                stack.push(JsonParserTask::Object);
+                let position = tasks.len();
+                tasks.push(JsonParserTask::Placeholder);
+                stack.push(JsonParserStack::Object(position));
                 Ok(Self::Object)
             }
             TokenType::RCurly => Err(JsonParsingErrorType::UnexpectedRCurly),
             TokenType::LBracket => {
-                stack.push(JsonParserTask::Array);
+                let position = tasks.len();
+                tasks.push(JsonParserTask::Placeholder);
+                stack.push(JsonParserStack::Array(position));
                 Ok(Self::Array)
             }
             TokenType::RBracket => Err(JsonParsingErrorType::UnexpectedRBracket),
@@ -79,7 +83,7 @@ impl JsonParserState {
 
     fn object(
         tasks: &mut Vec<JsonParserTask>,
-        stack: &mut Vec<JsonParserTask>,
+        stack: &mut Vec<JsonParserStack>,
         token: &Token,
     ) -> Result<Self, JsonParsingErrorType> {
         let Token {
@@ -92,8 +96,8 @@ impl JsonParserState {
             TokenType::RCurly => {
                 let last = stack.pop();
 
-                if let Some(obj @ JsonParserTask::Object) = last {
-                    tasks.push(obj);
+                if let Some(JsonParserStack::Object(position)) = last {
+                    tasks[position] = JsonParserTask::Object;
                 } else {
                     return Err(JsonParsingErrorType::UnmatchedRCurly);
                 }
@@ -106,7 +110,7 @@ impl JsonParserState {
 
     fn array(
         tasks: &mut Vec<JsonParserTask>,
-        stack: &mut Vec<JsonParserTask>,
+        stack: &mut Vec<JsonParserStack>,
         token: &Token,
     ) -> Result<Self, JsonParsingErrorType> {
         let Token {
@@ -116,11 +120,17 @@ impl JsonParserState {
         } = *token;
 
         match token_type {
+            TokenType::LBracket => {
+                let position = tasks.len();
+                tasks.push(JsonParserTask::Placeholder);
+                stack.push(JsonParserStack::Array(position));
+                Ok(Self::Array)
+            }
             TokenType::RBracket => {
                 let last = stack.pop();
 
-                if let Some(arr @ JsonParserTask::Array) = last {
-                    tasks.push(arr);
+                if let Some(JsonParserStack::Array(position)) = last {
+                    tasks[position] = JsonParserTask::Array;
                 } else {
                     return Err(JsonParsingErrorType::UnmatchedRBracket);
                 }
@@ -152,8 +162,8 @@ impl JsonParserState {
     }
 
     fn array_separator(
-        _tasks: &mut Vec<JsonParserTask>,
-        _stack: &mut Vec<JsonParserTask>,
+        tasks: &mut Vec<JsonParserTask>,
+        stack: &mut Vec<JsonParserStack>,
         token: &Token,
     ) -> Result<Self, JsonParsingErrorType> {
         let Token {
@@ -163,30 +173,26 @@ impl JsonParserState {
         } = token;
 
         match token_type {
+            TokenType::RBracket => {
+                let last = stack.pop();
+
+                if let Some(JsonParserStack::Array(position)) = last {
+                    tasks[position] = JsonParserTask::Array;
+                } else {
+                    return Err(JsonParsingErrorType::UnmatchedRBracket);
+                }
+
+                Self::stack_based_next_state(stack)
+            }
             TokenType::Comma => Ok(JsonParserState::Array),
             _ => unimplemented!(),
         }
     }
 
-    fn stack_based_next_state(stack: &[JsonParserTask]) -> Result<Self, JsonParsingErrorType> {
+    fn stack_based_next_state(stack: &[JsonParserStack]) -> Result<Self, JsonParsingErrorType> {
         match stack.last() {
-            Some(JsonParserTask::Object) => Ok(Self::Object),
-            Some(JsonParserTask::Array) => unimplemented!(),
-            Some(JsonParserTask::String { .. }) => {
-                unreachable!("String should never be present on stack.")
-            }
-            Some(JsonParserTask::Number { .. }) => {
-                unreachable!("Number should never be present on stack.")
-            }
-            Some(JsonParserTask::True) => {
-                unreachable!("True should never be present on stack.")
-            }
-            Some(JsonParserTask::False) => {
-                unreachable!("False should never be present on stack.")
-            }
-            Some(JsonParserTask::Null) => {
-                unreachable!("Null should never be present on stack.")
-            }
+            Some(JsonParserStack::Object(_)) => Ok(Self::Object),
+            Some(JsonParserStack::Array(_)) => Ok(Self::ArraySeparator),
             None => Ok(Self::WaitingEof),
         }
     }

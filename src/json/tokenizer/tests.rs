@@ -478,3 +478,171 @@ fn object() {
         ]
     );
 }
+
+#[test]
+fn single_digit() {
+    //  1
+    // 10
+    let json = r#"0"#;
+    let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
+    assert_eq!(
+        tokens,
+        &[Token {
+            // .0
+            start: StrCursor {
+                byte: 0,
+                line: 1,
+                column: 1
+            },
+            // 0.
+            end: StrCursor {
+                byte: 1,
+                line: 1,
+                column: 2
+            },
+            token_type: TokenType::Number
+        },]
+    );
+    let head = &tokens[0];
+    assert_eq!(&json[head.start.to_range(&head.end)], r#"0"#);
+}
+
+#[test]
+fn negative_single_digit() {
+    //  12
+    // 1-0
+    let json = r#"-0"#;
+    let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
+    assert_eq!(
+        tokens,
+        &[Token {
+            // .-0
+            start: StrCursor {
+                byte: 0,
+                line: 1,
+                column: 1
+            },
+            // -0.
+            end: StrCursor {
+                byte: 2,
+                line: 1,
+                column: 3
+            },
+            token_type: TokenType::Number
+        },]
+    );
+    let head = &tokens[0];
+    assert_eq!(&json[head.start.to_range(&head.end)], r#"-0"#);
+}
+
+#[test]
+fn multi_digit() {
+    //  123
+    // 1123
+    let json = r#"123"#;
+    let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
+    assert_eq!(
+        tokens,
+        &[Token {
+            // .123
+            start: StrCursor {
+                byte: 0,
+                line: 1,
+                column: 1
+            },
+            // 123.
+            end: StrCursor {
+                byte: 3,
+                line: 1,
+                column: 4
+            },
+            token_type: TokenType::Number
+        },]
+    );
+    let head = &tokens[0];
+    assert_eq!(&json[head.start.to_range(&head.end)], r#"123"#);
+}
+
+#[test]
+fn negative_multi_digit() {
+    //  1234
+    // 1-123
+    let json = r#"-123"#;
+    let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
+    assert_eq!(
+        tokens,
+        &[Token {
+            // .-123
+            start: StrCursor {
+                byte: 0,
+                line: 1,
+                column: 1
+            },
+            // -123.
+            end: StrCursor {
+                byte: 4,
+                line: 1,
+                column: 5
+            },
+            token_type: TokenType::Number
+        },]
+    );
+    let head = &tokens[0];
+    assert_eq!(&json[head.start.to_range(&head.end)], r#"-123"#);
+}
+
+#[test]
+fn fraction() {
+    //  12345
+    // 10.123
+    let json = r#"0.123"#;
+    let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
+    assert_eq!(
+        tokens,
+        &[Token {
+            // .0.123
+            start: StrCursor {
+                byte: 0,
+                line: 1,
+                column: 1
+            },
+            // 0.123.
+            end: StrCursor {
+                byte: 5,
+                line: 1,
+                column: 6
+            },
+            token_type: TokenType::Number
+        },]
+    );
+    let head = &tokens[0];
+    assert_eq!(&json[head.start.to_range(&head.end)], r#"0.123"#);
+}
+
+#[test]
+fn negative_fraction() {
+    //  123456
+    // 1-0.123
+    let json = r#"-0.123"#;
+    let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
+    assert_eq!(
+        tokens,
+        &[Token {
+            // .-0.123
+            start: StrCursor {
+                byte: 0,
+                line: 1,
+                column: 1
+            },
+            // -0.123.
+            end: StrCursor {
+                byte: 6,
+                line: 1,
+                column: 7
+            },
+            token_type: TokenType::Number
+        },]
+    );
+    let head = &tokens[0];
+    assert_eq!(&json[head.start.to_range(&head.end)], r#"-0.123"#);
+}

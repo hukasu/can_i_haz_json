@@ -201,7 +201,12 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
 
     fn seen_zero(&mut self) -> Result<Option<Token>, TokenizerError> {
         let Some(current_char) = self.iterator.next() else {
-            return Ok(Some(self.eof()));
+            self.stored_token = Some(self.eof());
+            return Ok(Some(Token {
+                start: self.token_start_cursor,
+                end: self.cursor,
+                token_type: TokenType::Number,
+            }));
         };
 
         let res = match current_char {
@@ -238,7 +243,12 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
 
     fn number(&mut self) -> Result<Option<Token>, TokenizerError> {
         let Some(current_char) = self.iterator.next() else {
-            return Ok(Some(self.eof()));
+            self.stored_token = Some(self.eof());
+            return Ok(Some(Token {
+                start: self.token_start_cursor,
+                end: self.cursor,
+                token_type: TokenType::Number,
+            }));
         };
 
         let res = match current_char {
@@ -296,7 +306,12 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
 
     fn fraction(&mut self) -> Result<Option<Token>, TokenizerError> {
         let Some(current_char) = self.iterator.next() else {
-            return Ok(Some(self.eof()));
+            self.stored_token = Some(self.eof());
+            return Ok(Some(Token {
+                start: self.token_start_cursor,
+                end: self.cursor,
+                token_type: TokenType::Number,
+            }));
         };
 
         let res = match current_char {

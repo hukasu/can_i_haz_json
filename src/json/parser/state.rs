@@ -58,7 +58,13 @@ impl JsonParserState {
                 });
                 Ok(Self::WaitingEof)
             }
-            TokenType::Number => unimplemented!(),
+            TokenType::Number => {
+                tasks.push(JsonParserTask::Number {
+                    start: *start,
+                    end: *end,
+                });
+                Ok(Self::WaitingEof)
+            }
             TokenType::True => {
                 tasks.push(JsonParserTask::True);
                 Ok(Self::WaitingEof)

@@ -67,9 +67,10 @@ mod tests {
         let json = Json::new(Cow::Borrowed(json_data)).unwrap();
         assert_eq!(json.compiled.len(), 0x18);
 
-        let JsonValue::Array = *json else {
+        let JsonValue::Array { values } = *json else {
             panic!("Json did not have Array root.");
         };
+        assert!(values.is_empty())
     }
 
     #[test]

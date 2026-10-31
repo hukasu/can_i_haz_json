@@ -86,6 +86,19 @@ mod tests {
     }
 
     #[test]
+    fn string() {
+        let json_data = "\"string\"";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18);
+
+        let JsonValue::String(string) = *json else {
+            panic!("Json did not have String root.");
+        };
+
+        assert_eq!(string, "string");
+    }
+
+    #[test]
     fn zero() {
         let json_data = "0";
         let json = Json::new(Cow::Borrowed(json_data)).unwrap();

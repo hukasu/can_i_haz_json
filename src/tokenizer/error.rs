@@ -2,14 +2,14 @@ use core::{error::Error, fmt::Display};
 
 use crate::str_cursor::StrCursor;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct TokenizerError {
     pub start: StrCursor,
     pub end: StrCursor,
     pub error_type: TokenizerErrorType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenizerErrorType {
     InvalidToken,
     InvalidCharacterInString,

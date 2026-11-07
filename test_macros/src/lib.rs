@@ -64,8 +64,8 @@ fn init_logger() {
 fn {}() {{
     init_logger();
     let test_path = "{}";
-    let contents = std::fs::read_to_string(test_path).unwrap();
-    let res = ::can_i_haz_json::Json::new(::std::borrow::Cow::Owned(contents));
+    let contents = std::fs::read(test_path).unwrap();
+    let res = ::can_i_haz_json::Json::new(String::from_utf8_lossy(&contents));
     if {} {{
         assert!(res.is_err());
     }} else {{

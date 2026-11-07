@@ -164,7 +164,11 @@ impl JsonParserState {
                     values,
                 }) = last
                 {
-                    tasks[placeholder] = JsonParserTask::Array { values };
+                    if values.is_empty() {
+                        tasks[placeholder] = JsonParserTask::Array { values };
+                    } else {
+                        return Err(JsonParsingErrorType::NoValueAfterArraySeparator);
+                    }
                 } else {
                     return Err(JsonParsingErrorType::UnmatchedRBracket);
                 }

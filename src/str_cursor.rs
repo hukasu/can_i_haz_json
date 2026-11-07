@@ -9,7 +9,7 @@ pub struct StrCursor {
 impl StrCursor {
     /// Create a [`Range<usize>`](core::range::Range) from this objects
     /// [`byte`](StrCursor::byte) to the `end`s `byte`.
-    pub fn to_range(&self, end: &Self) -> core::range::Range<usize> {
+    pub fn to_range(self, end: &Self) -> core::range::Range<usize> {
         (self.byte..end.byte).into()
     }
 }

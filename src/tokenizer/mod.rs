@@ -38,6 +38,10 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
         }
     }
 
+    pub fn cursor(&self) -> StrCursor {
+        self.cursor
+    }
+
     /// Consumes the [`JsonTokenizer`] to its end, collecting
     /// all the tokens into a [`Vec`].
     #[cfg(test)]

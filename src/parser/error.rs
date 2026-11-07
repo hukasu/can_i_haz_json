@@ -20,6 +20,8 @@ pub enum JsonParsingErrorType {
     UnmatchedRCurly,
     UnexpectedRBracket,
     UnmatchedRBracket,
+    UnclosedObject,
+    UnclosedArray,
     EmptyBody,
 }
 
@@ -41,6 +43,12 @@ impl Display for JsonParsingError<'_> {
                 write!(f, "")
             }
             JsonParsingErrorType::UnmatchedRBracket => {
+                write!(f, "")
+            }
+            JsonParsingErrorType::UnclosedObject => {
+                write!(f, "")
+            }
+            JsonParsingErrorType::UnclosedArray => {
                 write!(f, "")
             }
             JsonParsingErrorType::EmptyBody => {

@@ -8,7 +8,10 @@ use log::*;
 
 use crate::{
     FIRST_OFFSET, Json, JsonValue, POINTER_WIDTH, SECOND_OFFSET, THIRD_OFFSET,
-    parser::{error::JsonParsingErrorType, state::JsonParserState, tasks::JsonParserTask},
+    parser::{
+        error::JsonParsingErrorType, stack::JsonParserStack, state::JsonParserState,
+        tasks::JsonParserTask,
+    },
     str_cursor::StrCursor,
     tokenizer::JsonTokenizer,
 };
@@ -38,12 +41,12 @@ impl JsonParser {
     fn parse_json<'a>(
         data: Cow<'a, str>,
     ) -> Result<(Vec<JsonParserTask>, Cow<'a, str>), JsonParsingError<'a>> {
-        let tokens = JsonTokenizer::new(data.chars());
+        let mut tokens = JsonTokenizer::new(data.chars());
         let mut state = JsonParserState::Root;
         let mut stack = alloc::vec![];
         let mut tasks = alloc::vec![];
 
-        for token in tokens {
+        for token in &mut tokens {
             let token = match token {
                 Ok(token) => token,
                 Err(error) => {
@@ -68,6 +71,24 @@ impl JsonParser {
                     });
                 }
             }
+        }
+
+        if !stack.is_empty() {
+            let end = tokens.cursor();
+            return match stack.last().unwrap() {
+                JsonParserStack::Object { start, .. } => Err(JsonParsingError {
+                    json: data,
+                    start: *start,
+                    end,
+                    error_type: JsonParsingErrorType::UnclosedObject,
+                }),
+                JsonParserStack::Array { start, .. } => Err(JsonParsingError {
+                    json: data,
+                    start: *start,
+                    end,
+                    error_type: JsonParsingErrorType::UnclosedArray,
+                }),
+            };
         }
 
         Ok((tasks, data))

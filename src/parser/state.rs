@@ -45,6 +45,7 @@ impl JsonParserState {
                 let position = tasks.len();
                 tasks.push(JsonParserTask::Placeholder);
                 stack.push(JsonParserStack::Object {
+                    start,
                     placeholder: position,
                 });
                 Ok(Self::Object)
@@ -54,6 +55,7 @@ impl JsonParserState {
                 let position = tasks.len();
                 tasks.push(JsonParserTask::Placeholder);
                 stack.push(JsonParserStack::Array {
+                    start,
                     placeholder: position,
                     values: Vec::new(),
                 });
@@ -101,7 +103,11 @@ impl JsonParserState {
             TokenType::RCurly => {
                 let last = stack.pop();
 
-                if let Some(JsonParserStack::Object { placeholder }) = last {
+                if let Some(JsonParserStack::Object {
+                    start: _,
+                    placeholder,
+                }) = last
+                {
                     tasks[placeholder] = JsonParserTask::Object;
                 } else {
                     return Err(JsonParsingErrorType::UnmatchedRCurly);
@@ -127,6 +133,7 @@ impl JsonParserState {
         match token_type {
             TokenType::LBracket => {
                 let Some(JsonParserStack::Array {
+                    start: _,
                     placeholder: _,
                     values,
                 }) = stack.last_mut()
@@ -138,6 +145,7 @@ impl JsonParserState {
                 values.push(position);
                 tasks.push(JsonParserTask::Placeholder);
                 stack.push(JsonParserStack::Array {
+                    start,
                     placeholder: position,
                     values: Vec::new(),
                 });
@@ -147,6 +155,7 @@ impl JsonParserState {
                 let last = stack.pop();
 
                 if let Some(JsonParserStack::Array {
+                    start: _,
                     placeholder,
                     values,
                 }) = last
@@ -160,6 +169,7 @@ impl JsonParserState {
             }
             TokenType::String => {
                 let Some(JsonParserStack::Array {
+                    start: _,
                     placeholder: _,
                     values,
                 }) = stack.last_mut()
@@ -174,6 +184,7 @@ impl JsonParserState {
             }
             TokenType::Number => {
                 let Some(JsonParserStack::Array {
+                    start: _,
                     placeholder: _,
                     values,
                 }) = stack.last_mut()
@@ -188,6 +199,7 @@ impl JsonParserState {
             }
             TokenType::True => {
                 let Some(JsonParserStack::Array {
+                    start: _,
                     placeholder: _,
                     values,
                 }) = stack.last_mut()
@@ -202,6 +214,7 @@ impl JsonParserState {
             }
             TokenType::False => {
                 let Some(JsonParserStack::Array {
+                    start: _,
                     placeholder: _,
                     values,
                 }) = stack.last_mut()
@@ -216,6 +229,7 @@ impl JsonParserState {
             }
             TokenType::Null => {
                 let Some(JsonParserStack::Array {
+                    start: _,
                     placeholder: _,
                     values,
                 }) = stack.last_mut()
@@ -248,6 +262,7 @@ impl JsonParserState {
                 let last = stack.pop();
 
                 if let Some(JsonParserStack::Array {
+                    start: _,
                     placeholder,
                     values,
                 }) = last

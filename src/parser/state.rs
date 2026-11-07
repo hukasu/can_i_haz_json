@@ -246,7 +246,8 @@ impl JsonParserState {
                 tasks.push(JsonParserTask::Null);
                 Ok(Self::ArraySeparator)
             }
-            _ => unimplemented!(),
+            TokenType::Comma => Err(JsonParsingErrorType::UnexpectedComma),
+            _ => unimplemented!("{:?}", token),
         }
     }
 

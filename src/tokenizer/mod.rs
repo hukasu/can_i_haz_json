@@ -5,6 +5,7 @@ mod token;
 
 #[cfg(test)]
 use alloc::vec::Vec;
+use log::trace;
 
 use crate::str_cursor::StrCursor;
 
@@ -122,6 +123,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             }
             _ => self.invalid_token(),
         };
+        trace!("'start' produced {res:?}");
 
         self.cursor += current_char;
 
@@ -149,6 +151,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             '\u{0020}'..='\u{10ffff}' => Ok(None),
             _ => self.invalid_character_in_string(),
         };
+        trace!("'string' produced {res:?}");
 
         self.cursor += current_char;
 
@@ -171,6 +174,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             }
             _ => self.invalid_escaped_character_in_string(),
         };
+        trace!("'escaped_character' produced {res:?}");
 
         self.cursor += current_char;
 
@@ -197,6 +201,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
         } else {
             self.invalid_escaped_character_in_string()
         };
+        trace!("'hex{N}' produced {res:?}");
 
         self.cursor += current_char;
 
@@ -239,6 +244,10 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             })),
             _ => self.invalid_character_in_string(),
         };
+        trace!("'seen_zero' produced {res:?}");
+        if let Some(stored) = self.stored_token {
+            trace!("'seen_zero' stored {stored:?}");
+        }
 
         self.cursor += current_char;
 
@@ -281,6 +290,10 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             })),
             _ => self.invalid_digit_in_number(),
         };
+        trace!("'number' produced {res:?}");
+        if let Some(stored) = self.stored_token {
+            trace!("'number' stored {stored:?}");
+        }
 
         self.cursor += current_char;
 
@@ -302,6 +315,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             }
             _ => self.invalid_digit_in_number(),
         };
+        trace!("'seen_fraction' produced {res:?}");
 
         self.cursor += current_char;
 
@@ -340,6 +354,10 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             })),
             _ => self.invalid_digit_in_number(),
         };
+        trace!("'fraction' produced {res:?}");
+        if let Some(stored) = self.stored_token {
+            trace!("'fraction' stored {stored:?}");
+        }
 
         self.cursor += current_char;
 
@@ -361,6 +379,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                 self.invalid_token()
             }
         };
+        trace!("'seen_t' produced {res:?}");
 
         self.cursor += current_char;
 
@@ -382,6 +401,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                 self.invalid_token()
             }
         };
+        trace!("'seen_tr' produced {res:?}");
 
         self.cursor += current_char;
 
@@ -407,6 +427,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                 self.invalid_token()
             }
         };
+        trace!("'seen_tru' produced {res:?}");
 
         self.cursor += current_char;
 
@@ -428,6 +449,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                 self.invalid_token()
             }
         };
+        trace!("'seen_f' produced {res:?}");
 
         self.cursor += current_char;
 
@@ -449,6 +471,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                 self.invalid_token()
             }
         };
+        trace!("'seen_fa' produced {res:?}");
 
         self.cursor += current_char;
 
@@ -470,6 +493,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                 self.invalid_token()
             }
         };
+        trace!("'seen_fal' produced {res:?}");
 
         self.cursor += current_char;
 
@@ -495,6 +519,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                 self.invalid_token()
             }
         };
+        trace!("'seen_fals' produced {res:?}");
 
         self.cursor += current_char;
 
@@ -516,6 +541,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                 self.invalid_token()
             }
         };
+        trace!("'seen_n' produced {res:?}");
 
         self.cursor += current_char;
 
@@ -537,6 +563,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                 self.invalid_token()
             }
         };
+        trace!("'seen_nu' produced {res:?}");
 
         self.cursor += current_char;
 
@@ -562,6 +589,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                 self.invalid_token()
             }
         };
+        trace!("'seen_nul' produced {res:?}");
 
         self.cursor += current_char;
 

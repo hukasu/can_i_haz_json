@@ -35,7 +35,7 @@ impl JsonParserState {
         stack: &mut Vec<JsonParserStack>,
         token: &Token,
     ) -> Result<Self, JsonParsingErrorType> {
-        trace!("{token:?}");
+        trace!("'root' consumed {token:?}");
         let Token {
             start,
             end,
@@ -95,7 +95,7 @@ impl JsonParserState {
         stack: &mut Vec<JsonParserStack>,
         token: &Token,
     ) -> Result<Self, JsonParsingErrorType> {
-        trace!("{token:?}");
+        trace!("'object' consumed {token:?}");
         let Token {
             start: _,
             end: _,
@@ -127,7 +127,7 @@ impl JsonParserState {
         stack: &mut Vec<JsonParserStack>,
         token: &Token,
     ) -> Result<Self, JsonParsingErrorType> {
-        trace!("{token:?}");
+        trace!("'array' consumed {token:?}");
         let Token {
             start,
             end,
@@ -256,7 +256,7 @@ impl JsonParserState {
         stack: &mut Vec<JsonParserStack>,
         token: &Token,
     ) -> Result<Self, JsonParsingErrorType> {
-        trace!("{token:?}");
+        trace!("'array_separator' consumed {token:?}");
         let Token {
             start: _,
             end: _,

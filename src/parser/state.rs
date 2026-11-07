@@ -1,4 +1,5 @@
 use alloc::vec::Vec;
+use log::trace;
 
 use crate::{
     parser::{error::JsonParsingErrorType, stack::JsonParserStack, tasks::JsonParserTask},
@@ -34,6 +35,7 @@ impl JsonParserState {
         stack: &mut Vec<JsonParserStack>,
         token: &Token,
     ) -> Result<Self, JsonParsingErrorType> {
+        trace!("{token:?}");
         let Token {
             start,
             end,
@@ -93,6 +95,7 @@ impl JsonParserState {
         stack: &mut Vec<JsonParserStack>,
         token: &Token,
     ) -> Result<Self, JsonParsingErrorType> {
+        trace!("{token:?}");
         let Token {
             start: _,
             end: _,
@@ -124,6 +127,7 @@ impl JsonParserState {
         stack: &mut Vec<JsonParserStack>,
         token: &Token,
     ) -> Result<Self, JsonParsingErrorType> {
+        trace!("{token:?}");
         let Token {
             start,
             end,
@@ -251,6 +255,7 @@ impl JsonParserState {
         stack: &mut Vec<JsonParserStack>,
         token: &Token,
     ) -> Result<Self, JsonParsingErrorType> {
+        trace!("{token:?}");
         let Token {
             start: _,
             end: _,
@@ -275,7 +280,7 @@ impl JsonParserState {
                 Self::stack_based_next_state(stack)
             }
             TokenType::Comma => Ok(JsonParserState::Array),
-            _ => unimplemented!(),
+            _ => unimplemented!("{:?}", token),
         }
     }
 

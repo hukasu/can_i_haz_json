@@ -661,3 +661,111 @@ fn negative_fraction() {
     let head = &tokens[0];
     assert_eq!(&json[head.start.to_range(&head.end)], r#"-0.123"#);
 }
+
+#[test]
+fn number_then_new_line() {
+    let _ = env_logger::builder().is_test(true).try_init();
+    //  123
+    // 1[1,
+    // 21
+    // 3,1
+    let json = r#"[1,
+1
+,1"#;
+    let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
+    comparator(
+        &tokens,
+        &[
+            Token {
+                // .[1,
+                start: StrCursor {
+                    byte: 0,
+                    line: 1,
+                    column: 1,
+                },
+                // [.1,
+                end: StrCursor {
+                    byte: 1,
+                    line: 1,
+                    column: 2,
+                },
+                token_type: TokenType::LBracket,
+            },
+            Token {
+                // [.1,
+                start: StrCursor {
+                    byte: 1,
+                    line: 1,
+                    column: 2,
+                },
+                // [1.,
+                end: StrCursor {
+                    byte: 2,
+                    line: 1,
+                    column: 3,
+                },
+                token_type: TokenType::Number,
+            },
+            Token {
+                // [1.,
+                start: StrCursor {
+                    byte: 2,
+                    line: 1,
+                    column: 3,
+                },
+                // [1,.
+                end: StrCursor {
+                    byte: 3,
+                    line: 1,
+                    column: 4,
+                },
+                token_type: TokenType::Comma,
+            },
+            Token {
+                // .1
+                start: StrCursor {
+                    byte: 4,
+                    line: 2,
+                    column: 1,
+                },
+                // 1.
+                end: StrCursor {
+                    byte: 5,
+                    line: 2,
+                    column: 2,
+                },
+                token_type: TokenType::Number,
+            },
+            Token {
+                // .,1
+                start: StrCursor {
+                    byte: 6,
+                    line: 3,
+                    column: 1,
+                },
+                // ,.1
+                end: StrCursor {
+                    byte: 7,
+                    line: 3,
+                    column: 2,
+                },
+                token_type: TokenType::Comma,
+            },
+            Token {
+                // ,.1
+                start: StrCursor {
+                    byte: 7,
+                    line: 3,
+                    column: 2,
+                },
+                // ,1.
+                end: StrCursor {
+                    byte: 8,
+                    line: 3,
+                    column: 3,
+                },
+                token_type: TokenType::Number,
+            },
+        ],
+    );
+}

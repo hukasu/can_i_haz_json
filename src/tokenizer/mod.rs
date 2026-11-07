@@ -283,11 +283,14 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                     token_type: TokenType::Number,
                 }))
             }
-            '\u{0020}' | '\u{000A}' | '\u{000D}' | '\u{0009}' => Ok(Some(Token {
-                start: self.token_start_cursor,
-                end: self.cursor,
-                token_type: TokenType::Number,
-            })),
+            '\u{0020}' | '\u{000A}' | '\u{000D}' | '\u{0009}' => {
+                self.state = Self::start;
+                Ok(Some(Token {
+                    start: self.token_start_cursor,
+                    end: self.cursor,
+                    token_type: TokenType::Number,
+                }))
+            }
             _ => self.invalid_digit_in_number(),
         };
         trace!("'number' produced {res:?}");

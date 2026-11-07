@@ -3,6 +3,7 @@ mod error;
 mod tests;
 mod token;
 
+#[cfg(test)]
 use alloc::vec::Vec;
 
 use crate::str_cursor::StrCursor;
@@ -39,7 +40,8 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
 
     /// Consumes the [`JsonTokenizer`] to its end, collecting
     /// all the tokens into a [`Vec`].
-    pub fn tokenize(self) -> Result<Vec<Token>, TokenizerError> {
+    #[cfg(test)]
+    fn tokenize(self) -> Result<Vec<Token>, TokenizerError> {
         self.collect()
     }
 

@@ -21,6 +21,7 @@ pub enum JsonParsingErrorType {
     UnexpectedRBracket,
     UnmatchedRBracket,
     UnexpectedComma,
+    NoCommaBetweeArrayValues,
     UnclosedObject,
     UnclosedArray,
     EmptyBody,
@@ -47,6 +48,9 @@ impl Display for JsonParsingError<'_> {
                 write!(f, "")
             }
             JsonParsingErrorType::UnexpectedComma => {
+                write!(f, "")
+            }
+            JsonParsingErrorType::NoCommaBetweeArrayValues => {
                 write!(f, "")
             }
             JsonParsingErrorType::UnclosedObject => {

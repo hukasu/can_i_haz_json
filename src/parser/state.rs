@@ -281,6 +281,13 @@ impl JsonParserState {
                 Self::stack_based_next_state(stack)
             }
             TokenType::Comma => Ok(JsonParserState::Array),
+            TokenType::LBracket
+            | TokenType::LCurly
+            | TokenType::String
+            | TokenType::Number
+            | TokenType::True
+            | TokenType::False
+            | TokenType::Null => Err(JsonParsingErrorType::EmptyBody),
             _ => unimplemented!("{:?}", token),
         }
     }

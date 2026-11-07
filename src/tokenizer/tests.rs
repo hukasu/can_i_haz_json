@@ -3,11 +3,18 @@ use crate::{
     tokenizer::{JsonTokenizer, Token, TokenType},
 };
 
+fn comparator(tokens: &[Token], expected: &[Token]) {
+    for (i, (l, r)) in tokens.iter().zip(expected.iter()).enumerate() {
+        assert_eq!(l, r, "Token mismatch at index {i}");
+    }
+    assert_eq!(tokens.len(), expected.len(), "Wrong length of tokens");
+}
+
 #[test]
 fn empty() {
     let json = "";
     let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
-    assert!(tokens.is_empty());
+    comparator(&tokens, &[]);
 }
 
 #[test]
@@ -16,8 +23,8 @@ fn empty_object() {
     // 1{}
     let json = "{}";
     let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
-    assert_eq!(
-        tokens,
+    comparator(
+        &tokens,
         &[
             Token {
                 // .{}
@@ -32,7 +39,7 @@ fn empty_object() {
                     line: 1,
                     column: 2,
                 },
-                token_type: TokenType::LCurly
+                token_type: TokenType::LCurly,
             },
             Token {
                 // {.}
@@ -47,9 +54,9 @@ fn empty_object() {
                     line: 1,
                     column: 3,
                 },
-                token_type: TokenType::RCurly
-            }
-        ]
+                token_type: TokenType::RCurly,
+            },
+        ],
     );
 }
 
@@ -59,8 +66,8 @@ fn empty_array() {
     // 1[]
     let json = "[]";
     let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
-    assert_eq!(
-        tokens,
+    comparator(
+        &tokens,
         &[
             Token {
                 // .[]
@@ -75,7 +82,7 @@ fn empty_array() {
                     line: 1,
                     column: 2,
                 },
-                token_type: TokenType::LBracket
+                token_type: TokenType::LBracket,
             },
             Token {
                 // [.]
@@ -90,9 +97,9 @@ fn empty_array() {
                     line: 1,
                     column: 3,
                 },
-                token_type: TokenType::RBracket
-            }
-        ]
+                token_type: TokenType::RBracket,
+            },
+        ],
     );
 }
 
@@ -102,8 +109,8 @@ fn empty_string() {
     // 1""
     let json = r#""""#;
     let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
-    assert_eq!(
-        tokens,
+    comparator(
+        &tokens,
         &[Token {
             // .""
             start: StrCursor {
@@ -117,9 +124,10 @@ fn empty_string() {
                 line: 1,
                 column: 3,
             },
-            token_type: TokenType::String
-        },]
+            token_type: TokenType::String,
+        }],
     );
+
     let head = &tokens[0];
     assert_eq!(&json[head.start.to_range(&head.end)], r#""""#);
 }
@@ -131,24 +139,25 @@ fn unicode_string() {
     let json = r#""🙂""#;
     let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
     const LENGTH_OF_EMOJI: usize = '🙂'.len_utf8();
-    assert_eq!(
-        tokens,
+    comparator(
+        &tokens,
         &[Token {
             // ."🙂"
             start: StrCursor {
                 byte: 0,
                 line: 1,
-                column: 1
+                column: 1,
             },
             // "🙂".
             end: StrCursor {
                 byte: 2 + LENGTH_OF_EMOJI,
                 line: 1,
-                column: 4
+                column: 4,
             },
-            token_type: TokenType::String
-        },]
+            token_type: TokenType::String,
+        }],
     );
+
     let head = &tokens[0];
     assert_eq!(&json[head.start.to_range(&head.end)], r#""🙂""#);
 }
@@ -159,40 +168,40 @@ fn leading_whitespaces() {
     // 1____{}
     let json = r#"    {}"#;
     let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
-    assert_eq!(
-        tokens,
+    comparator(
+        &tokens,
         &[
             Token {
                 // ____.{}
                 start: StrCursor {
                     byte: 4,
                     line: 1,
-                    column: 5
+                    column: 5,
                 },
                 // ____{.}
                 end: StrCursor {
                     byte: 5,
                     line: 1,
-                    column: 6
+                    column: 6,
                 },
-                token_type: TokenType::LCurly
+                token_type: TokenType::LCurly,
             },
             Token {
                 // ____{.}
                 start: StrCursor {
                     byte: 5,
                     line: 1,
-                    column: 6
+                    column: 6,
                 },
                 // ____{}.
                 end: StrCursor {
                     byte: 6,
                     line: 1,
-                    column: 7
+                    column: 7,
                 },
-                token_type: TokenType::RCurly
-            }
-        ]
+                token_type: TokenType::RCurly,
+            },
+        ],
     );
 }
 
@@ -204,8 +213,8 @@ fn leading_newline() {
     let json = r#"
 {}"#;
     let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
-    assert_eq!(
-        tokens,
+    comparator(
+        &tokens,
         &[
             Token {
                 // _
@@ -213,16 +222,16 @@ fn leading_newline() {
                 start: StrCursor {
                     byte: 1,
                     line: 2,
-                    column: 1
+                    column: 1,
                 },
                 // _
                 // {.}
                 end: StrCursor {
                     byte: 2,
                     line: 2,
-                    column: 2
+                    column: 2,
                 },
-                token_type: TokenType::LCurly
+                token_type: TokenType::LCurly,
             },
             Token {
                 // _
@@ -230,18 +239,18 @@ fn leading_newline() {
                 start: StrCursor {
                     byte: 2,
                     line: 2,
-                    column: 2
+                    column: 2,
                 },
                 // _
                 // {}.
                 end: StrCursor {
                     byte: 3,
                     line: 2,
-                    column: 3
+                    column: 3,
                 },
-                token_type: TokenType::RCurly
-            }
-        ]
+                token_type: TokenType::RCurly,
+            },
+        ],
     );
 }
 
@@ -253,8 +262,8 @@ fn multiline_empty_object() {
     let json = r#"{
 }"#;
     let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
-    assert_eq!(
-        tokens,
+    comparator(
+        &tokens,
         &[
             Token {
                 // .{_
@@ -262,16 +271,16 @@ fn multiline_empty_object() {
                 start: StrCursor {
                     byte: 0,
                     line: 1,
-                    column: 1
+                    column: 1,
                 },
                 // {._
                 // }
                 end: StrCursor {
                     byte: 1,
                     line: 1,
-                    column: 2
+                    column: 2,
                 },
-                token_type: TokenType::LCurly
+                token_type: TokenType::LCurly,
             },
             Token {
                 // {_
@@ -279,18 +288,18 @@ fn multiline_empty_object() {
                 start: StrCursor {
                     byte: 2,
                     line: 2,
-                    column: 1
+                    column: 1,
                 },
                 // {_
                 // }.
                 end: StrCursor {
                     byte: 3,
                     line: 2,
-                    column: 2
+                    column: 2,
                 },
-                token_type: TokenType::RCurly
+                token_type: TokenType::RCurly,
             },
-        ]
+        ],
     );
 }
 
@@ -307,175 +316,175 @@ fn object() {
     "dependencies": ["log"]
 }"#;
     let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
-    assert_eq!(
-        tokens,
+    comparator(
+        &tokens,
         &[
             Token {
                 // .{_
                 start: StrCursor {
                     byte: 0,
                     line: 1,
-                    column: 1
+                    column: 1,
                 },
                 // {._
                 end: StrCursor {
                     byte: 1,
                     line: 1,
-                    column: 2
+                    column: 2,
                 },
-                token_type: TokenType::LCurly
+                token_type: TokenType::LCurly,
             },
             Token {
                 // ____."name":_"can_i_haz_gltf",_
                 start: StrCursor {
                     byte: 6,
                     line: 2,
-                    column: 5
+                    column: 5,
                 },
                 // ____"name".:_"can_i_haz_gltf",_
                 end: StrCursor {
                     byte: 12,
                     line: 2,
-                    column: 11
+                    column: 11,
                 },
-                token_type: TokenType::String
+                token_type: TokenType::String,
             },
             Token {
                 // ____"name".:_"can_i_haz_gltf",_
                 start: StrCursor {
                     byte: 12,
                     line: 2,
-                    column: 11
+                    column: 11,
                 },
                 // ____"name":._"can_i_haz_gltf",_
                 end: StrCursor {
                     byte: 13,
                     line: 2,
-                    column: 12
+                    column: 12,
                 },
-                token_type: TokenType::Colon
+                token_type: TokenType::Colon,
             },
             Token {
                 // ____"name":_."can_i_haz_gltf",_
                 start: StrCursor {
                     byte: 14,
                     line: 2,
-                    column: 13
+                    column: 13,
                 },
                 // ____"name":_"can_i_haz_gltf".,_
                 end: StrCursor {
                     byte: 30,
                     line: 2,
-                    column: 29
+                    column: 29,
                 },
-                token_type: TokenType::String
+                token_type: TokenType::String,
             },
             Token {
                 // ____"name":_"can_i_haz_gltf".,_
                 start: StrCursor {
                     byte: 30,
                     line: 2,
-                    column: 29
+                    column: 29,
                 },
                 // ____"name":_"can_i_haz_gltf",._
                 end: StrCursor {
                     byte: 31,
                     line: 2,
-                    column: 30
+                    column: 30,
                 },
-                token_type: TokenType::Comma
+                token_type: TokenType::Comma,
             },
             Token {
                 // ____."dependencies":_["log"]_
                 start: StrCursor {
                     byte: 36,
                     line: 3,
-                    column: 5
+                    column: 5,
                 },
                 // ____"dependencies".:_["log"]_
                 end: StrCursor {
                     byte: 50,
                     line: 3,
-                    column: 19
+                    column: 19,
                 },
-                token_type: TokenType::String
+                token_type: TokenType::String,
             },
             Token {
                 // ____"dependencies".:_["log"]_
                 start: StrCursor {
                     byte: 50,
                     line: 3,
-                    column: 19
+                    column: 19,
                 },
                 // ____"dependencies":._["log"]_
                 end: StrCursor {
                     byte: 51,
                     line: 3,
-                    column: 20
+                    column: 20,
                 },
-                token_type: TokenType::Colon
+                token_type: TokenType::Colon,
             },
             Token {
                 // ____"dependencies":_.["log"]_
                 start: StrCursor {
                     byte: 52,
                     line: 3,
-                    column: 21
+                    column: 21,
                 },
                 // ____"dependencies":_[."log"]_
                 end: StrCursor {
                     byte: 53,
                     line: 3,
-                    column: 22
+                    column: 22,
                 },
-                token_type: TokenType::LBracket
+                token_type: TokenType::LBracket,
             },
             Token {
                 // ____"dependencies":_[."log"]_
                 start: StrCursor {
                     byte: 53,
                     line: 3,
-                    column: 22
+                    column: 22,
                 },
                 // ____"dependencies":_["log".]_
                 end: StrCursor {
                     byte: 58,
                     line: 3,
-                    column: 27
+                    column: 27,
                 },
-                token_type: TokenType::String
+                token_type: TokenType::String,
             },
             Token {
                 // ____"dependencies":_["log".]_
                 start: StrCursor {
                     byte: 58,
                     line: 3,
-                    column: 27
+                    column: 27,
                 },
                 // ____"dependencies":_["log"]._
                 end: StrCursor {
                     byte: 59,
                     line: 3,
-                    column: 28
+                    column: 28,
                 },
-                token_type: TokenType::RBracket
+                token_type: TokenType::RBracket,
             },
             Token {
                 // .}
                 start: StrCursor {
                     byte: 60,
                     line: 4,
-                    column: 1
+                    column: 1,
                 },
                 // }.
                 end: StrCursor {
                     byte: 61,
                     line: 4,
-                    column: 2
+                    column: 2,
                 },
-                token_type: TokenType::RCurly
+                token_type: TokenType::RCurly,
             },
-        ]
+        ],
     );
 }
 
@@ -485,24 +494,25 @@ fn single_digit() {
     // 10
     let json = r#"0"#;
     let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
-    assert_eq!(
-        tokens,
+    comparator(
+        &tokens,
         &[Token {
             // .0
             start: StrCursor {
                 byte: 0,
                 line: 1,
-                column: 1
+                column: 1,
             },
             // 0.
             end: StrCursor {
                 byte: 1,
                 line: 1,
-                column: 2
+                column: 2,
             },
-            token_type: TokenType::Number
-        },]
+            token_type: TokenType::Number,
+        }],
     );
+
     let head = &tokens[0];
     assert_eq!(&json[head.start.to_range(&head.end)], r#"0"#);
 }
@@ -513,24 +523,25 @@ fn negative_single_digit() {
     // 1-0
     let json = r#"-0"#;
     let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
-    assert_eq!(
-        tokens,
+    comparator(
+        &tokens,
         &[Token {
             // .-0
             start: StrCursor {
                 byte: 0,
                 line: 1,
-                column: 1
+                column: 1,
             },
             // -0.
             end: StrCursor {
                 byte: 2,
                 line: 1,
-                column: 3
+                column: 3,
             },
-            token_type: TokenType::Number
-        },]
+            token_type: TokenType::Number,
+        }],
     );
+
     let head = &tokens[0];
     assert_eq!(&json[head.start.to_range(&head.end)], r#"-0"#);
 }
@@ -541,24 +552,25 @@ fn multi_digit() {
     // 1123
     let json = r#"123"#;
     let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
-    assert_eq!(
-        tokens,
+    comparator(
+        &tokens,
         &[Token {
             // .123
             start: StrCursor {
                 byte: 0,
                 line: 1,
-                column: 1
+                column: 1,
             },
             // 123.
             end: StrCursor {
                 byte: 3,
                 line: 1,
-                column: 4
+                column: 4,
             },
-            token_type: TokenType::Number
-        },]
+            token_type: TokenType::Number,
+        }],
     );
+
     let head = &tokens[0];
     assert_eq!(&json[head.start.to_range(&head.end)], r#"123"#);
 }
@@ -569,24 +581,25 @@ fn negative_multi_digit() {
     // 1-123
     let json = r#"-123"#;
     let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
-    assert_eq!(
-        tokens,
+    comparator(
+        &tokens,
         &[Token {
             // .-123
             start: StrCursor {
                 byte: 0,
                 line: 1,
-                column: 1
+                column: 1,
             },
             // -123.
             end: StrCursor {
                 byte: 4,
                 line: 1,
-                column: 5
+                column: 5,
             },
-            token_type: TokenType::Number
-        },]
+            token_type: TokenType::Number,
+        }],
     );
+
     let head = &tokens[0];
     assert_eq!(&json[head.start.to_range(&head.end)], r#"-123"#);
 }
@@ -597,24 +610,25 @@ fn fraction() {
     // 10.123
     let json = r#"0.123"#;
     let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
-    assert_eq!(
-        tokens,
+    comparator(
+        &tokens,
         &[Token {
             // .0.123
             start: StrCursor {
                 byte: 0,
                 line: 1,
-                column: 1
+                column: 1,
             },
             // 0.123.
             end: StrCursor {
                 byte: 5,
                 line: 1,
-                column: 6
+                column: 6,
             },
-            token_type: TokenType::Number
-        },]
+            token_type: TokenType::Number,
+        }],
     );
+
     let head = &tokens[0];
     assert_eq!(&json[head.start.to_range(&head.end)], r#"0.123"#);
 }
@@ -625,24 +639,25 @@ fn negative_fraction() {
     // 1-0.123
     let json = r#"-0.123"#;
     let tokens = JsonTokenizer::new(json.chars()).tokenize().unwrap();
-    assert_eq!(
-        tokens,
+    comparator(
+        &tokens,
         &[Token {
             // .-0.123
             start: StrCursor {
                 byte: 0,
                 line: 1,
-                column: 1
+                column: 1,
             },
             // -0.123.
             end: StrCursor {
                 byte: 6,
                 line: 1,
-                column: 7
+                column: 7,
             },
-            token_type: TokenType::Number
-        },]
+            token_type: TokenType::Number,
+        }],
     );
+
     let head = &tokens[0];
     assert_eq!(&json[head.start.to_range(&head.end)], r#"-0.123"#);
 }

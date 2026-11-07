@@ -1,6 +1,6 @@
 use crate::{
-    json::tokenizer::{JsonTokenizer, Token, TokenType},
     str_cursor::StrCursor,
+    tokenizer::{JsonTokenizer, Token, TokenType},
 };
 
 #[test]

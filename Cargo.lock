@@ -68,16 +68,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
-name = "can_i_haz_gltf"
+name = "can_i_haz_json"
 version = "0.1.0"
 dependencies = [
- "can_i_haz_gltf_test_macro",
+ "can_i_haz_json_test_macro",
  "env_logger",
  "log",
 ]
 
 [[package]]
-name = "can_i_haz_gltf_test_macro"
+name = "can_i_haz_json_test_macro"
 version = "0.1.0"
 dependencies = [
  "serde",

@@ -2,7 +2,7 @@ use core::{error::Error, fmt::Display};
 
 use alloc::borrow::Cow;
 
-use crate::{json::tokenizer::TokenizerErrorType, str_cursor::StrCursor};
+use crate::{str_cursor::StrCursor, tokenizer::TokenizerErrorType};
 
 /// A failure on the parsing of a JSON
 #[derive(Debug)]

@@ -7,13 +7,10 @@ use alloc::{borrow::Cow, boxed::Box, vec::Vec};
 use log::*;
 
 use crate::{
-    FIRST_OFFSET, POINTER_WIDTH, SECOND_OFFSET, THIRD_OFFSET,
-    json::{
-        Json, JsonValue,
-        parser::{error::JsonParsingErrorType, state::JsonParserState, tasks::JsonParserTask},
-        tokenizer::JsonTokenizer,
-    },
+    FIRST_OFFSET, Json, JsonValue, POINTER_WIDTH, SECOND_OFFSET, THIRD_OFFSET,
+    parser::{error::JsonParsingErrorType, state::JsonParserState, tasks::JsonParserTask},
     str_cursor::StrCursor,
+    tokenizer::JsonTokenizer,
 };
 
 pub use error::JsonParsingError;

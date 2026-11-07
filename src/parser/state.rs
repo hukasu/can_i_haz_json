@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-use crate::json::{
+use crate::{
     parser::{error::JsonParsingErrorType, stack::JsonParserStack, tasks::JsonParserTask},
     tokenizer::{Token, TokenType},
 };

@@ -1,74 +1,20 @@
 #![no_std]
-//! [`Gltf`] is a runtime asset delivery format designed to bridge
-//! the gap between 3D content creation tools and modern GL applications.
-//!
-//! # Versions
-//! This implementation attempts to decode glTF files using the versions
-//! [1.0](https://github.com/KhronosGroup/glTF/tree/main/specification/1.0)
-//! and [2.0](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html)
-//! of the specification.
-//!
-//! # Usage
-//! Creating a [`Gltf`] can be used with any data structure that implements
-//! [`Borrow<[u8>]`](core::borrow::Borrow).
-//!
-//! ```rust
-//! # use can_i_haz_gltf::Gltf;
-//! let data: &'static [u8] = b"{}";
-//! let gltf = Gltf::new(data).unwrap();
-//! ```
-//!
-//! ```rust
-//! # use can_i_haz_gltf::Gltf;
-//! let data: Vec<u8> = b"{}".to_vec();
-//! let gltf = Gltf::new(data).unwrap();
-//! ```
-//!
-//! ```rust
-//! # use can_i_haz_gltf::Gltf;
-//! let data: Box<[u8]> = (*b"{}").into();
-//! let gltf = Gltf::new(data).unwrap();
-//! ```
-//!
-//! ```rust
-//! # extern crate alloc;
-//! # use can_i_haz_gltf::Gltf;
-//! # use alloc::rc::Rc;
-//! let data: Rc<[u8]> = (*b"{}").into();
-//! let gltf = Gltf::new(data).unwrap();
-//! ```
-//!
-//! ```rust
-//! # extern crate alloc;
-//! # use can_i_haz_gltf::Gltf;
-//! # use alloc::sync::Arc;
-//! let data: Arc<[u8]> = (*b"{}").into();
-//! let gltf = Gltf::new(data).unwrap();
-//! ```
-//!
-//! ## Lifetimes
-//! [`Gltf::new`] takes in a owned type bound by ['static], making it impossible to
-//! create a [`Gltf`] from a reference.
-//!
-//! ```rust,compile_fail
-//! # use can_i_haz_gltf::Gltf;
-//! // Fails because `data` does not live long enough.
-//! let data: Vec<u8> = b"{}".to_vec();
-//! let gltf = Gltf::new(data.as_slice()).unwrap();
-//! let _  = gltf.version();
-//! ```
-//!
+
+mod object;
+mod parser;
+mod str_cursor;
+mod tokenizer;
+mod value;
 
 extern crate alloc;
 
-pub mod json;
-pub mod owned_t;
-pub mod str_cursor;
-mod validation_error;
+use core::ops::Deref;
 
-use alloc::borrow::Cow;
+use alloc::{borrow::Cow, boxed::Box};
 
-pub use validation_error::GltfValidationError;
+use crate::parser::JsonParser;
+
+pub use self::{object::JsonObject, parser::JsonParsingError, value::JsonValue};
 
 #[cfg(target_pointer_width = "32")]
 const POINTER_WIDTH: usize = 4;
@@ -79,23 +25,185 @@ const FIRST_OFFSET: usize = POINTER_WIDTH;
 const SECOND_OFFSET: usize = FIRST_OFFSET * 2;
 const THIRD_OFFSET: usize = FIRST_OFFSET * 3;
 
-const GLTF_MAGIC: [u8; 4] = [0x67, 0x6C, 0x54, 0x46];
-const GLTF_JSON_CHUNK_TYPE: u32 = 0x4E4F534A;
-const GLTF_BIN_CHUNK_TYPE: u32 = 0x004E4942;
-
-pub struct Gltf<'a> {
-    data: Cow<'a, [u8]>,
+#[derive(PartialEq, Eq)]
+pub struct Json<'a> {
+    data: Cow<'a, str>,
+    compiled: Box<[u8]>,
 }
 
-impl<'a> Gltf<'a> {
-    pub fn new(data: Cow<'a, [u8]>) -> Result<Self, GltfValidationError<'a>> {
-        // if contents[0] == b'{' {
-        //     Self::gltf_new(contents)
-        // } else if contents[..4] != GLTF_MAGIC {
-        //     Err(GltfValidationError::WrongMagic)
-        // } else {
-        //     Self::glb_new(contents)
-        // }
-        unimplemented!()
+impl<'a> Json<'a> {
+    /// Build a [`JsonDocument`] from the entire contents.
+    pub fn new(data: Cow<'a, str>) -> Result<Self, JsonParsingError<'a>> {
+        JsonParser::parse(data)
+    }
+}
+
+impl<'a> Deref for Json<'a> {
+    type Target = JsonValue<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe {
+            self.compiled
+                .as_ptr()
+                .cast::<JsonValue>()
+                .as_ref_unchecked()
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::POINTER_WIDTH;
+
+    use super::*;
+
+    #[test]
+    fn empty_object() {
+        let json_data = "{}";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18);
+
+        let JsonValue::Object(ref object) = *json else {
+            panic!("Json did not have Object root.");
+        };
+
+        assert_eq!(object.len(), 0);
+        assert!(object.is_empty());
+    }
+
+    #[test]
+    fn empty_array() {
+        let json_data = "[]";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18);
+
+        let JsonValue::Array { values } = *json else {
+            panic!("Json did not have Array root.");
+        };
+        assert!(values.is_empty())
+    }
+
+    #[test]
+    fn populated_array() {
+        let json_data = "[[\"inner\"], 0, \"hello\", true, false, null]";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18 * 8 + 7 * POINTER_WIDTH);
+
+        let JsonValue::Array { values } = *json else {
+            panic!("Json did not have Array root.");
+        };
+        assert_eq!(values.len(), 6);
+
+        let [array, number, string, r#true, r#false, null] = values else {
+            panic!("Could not destructure Array values.");
+        };
+
+        let JsonValue::Array { values } = *array else {
+            panic!("Value did not have Array type.");
+        };
+        assert_eq!(values.len(), 1);
+
+        let [inner_string] = values else {
+            panic!("Could not destructure inner Array values.");
+        };
+
+        let JsonValue::String(inner_string) = inner_string else {
+            panic!("Inner value did not have String type.");
+        };
+        assert_eq!(*inner_string, "inner");
+
+        let JsonValue::Number(number) = number else {
+            panic!("Value did not have Number type.");
+        };
+        assert_eq!(*number, "0");
+
+        let JsonValue::String(string) = string else {
+            panic!("Value did not have String type.");
+        };
+        assert_eq!(*string, "hello");
+
+        let JsonValue::True = r#true else {
+            panic!("Value did not have True type.");
+        };
+
+        let JsonValue::False = r#false else {
+            panic!("Value did not have False type.");
+        };
+
+        let JsonValue::Null = null else {
+            panic!("Value did not have Null type.");
+        };
+    }
+
+    #[test]
+    fn empty_string() {
+        let json_data = "\"\"";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18);
+
+        let JsonValue::String(string) = *json else {
+            panic!("Json did not have String root.");
+        };
+
+        assert_eq!(string, "");
+    }
+
+    #[test]
+    fn string() {
+        let json_data = "\"string\"";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18);
+
+        let JsonValue::String(string) = *json else {
+            panic!("Json did not have String root.");
+        };
+
+        assert_eq!(string, "string");
+    }
+
+    #[test]
+    fn zero() {
+        let json_data = "0";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18);
+
+        let JsonValue::Number(number) = *json else {
+            panic!("Json did not have Number root.");
+        };
+
+        assert_eq!(number.parse::<f32>(), Ok(0.0));
+    }
+
+    #[test]
+    fn true_root() {
+        let json_data = "true";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18);
+
+        let JsonValue::True = *json else {
+            panic!("Json did not have True root.");
+        };
+    }
+
+    #[test]
+    fn false_root() {
+        let json_data = "false";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18);
+
+        let JsonValue::False = *json else {
+            panic!("Json did not have False root.");
+        };
+    }
+
+    #[test]
+    fn null_root() {
+        let json_data = "null";
+        let json = Json::new(Cow::Borrowed(json_data)).unwrap();
+        assert_eq!(json.compiled.len(), 0x18);
+
+        let JsonValue::Null = *json else {
+            panic!("Json did not have Null root.");
+        };
     }
 }

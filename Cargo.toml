@@ -1,5 +1,5 @@
 [package]
-name = "can_i_haz_gltf"
+name = "can_i_haz_json"
 version = "0.1.0"
 edition = "2024"
 
@@ -8,4 +8,4 @@ log = "0.4"
 
 [dev-dependencies]
 env_logger = "0.11"
-can_i_haz_gltf_test_macro = { path = "test_macros" }
+can_i_haz_json_test_macro = { path = "test_macros" }

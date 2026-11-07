@@ -1,4 +1,4 @@
-use crate::json::JsonObject;
+use crate::JsonObject;
 
 #[derive(Debug, PartialEq, Eq)]
 #[repr(C)]

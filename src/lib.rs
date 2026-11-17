@@ -8,7 +8,7 @@ mod value;
 
 extern crate alloc;
 
-use core::ops::Deref;
+use core::{fmt::Debug, ops::Deref};
 
 use alloc::{borrow::Cow, boxed::Box};
 
@@ -48,6 +48,12 @@ impl<'a> Deref for Json<'a> {
                 .cast::<JsonValue>()
                 .as_ref_unchecked()
         }
+    }
+}
+
+impl Debug for Json<'_> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:?}", **self)
     }
 }
 

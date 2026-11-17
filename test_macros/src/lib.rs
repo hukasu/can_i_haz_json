@@ -67,9 +67,9 @@ fn {}() {{
     let contents = std::fs::read(test_path).unwrap();
     let res = ::can_i_haz_json::Json::new(String::from_utf8_lossy(&contents));
     if {} {{
-        assert!(res.is_err());
+        assert!(res.is_err(), "{{:?}}", res);
     }} else {{
-        assert!(res.is_ok());
+        assert!(res.is_ok(), "{{:?}}", res);
     }}
 }}
 "#,

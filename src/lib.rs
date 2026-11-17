@@ -28,7 +28,7 @@ pub struct Json<'a> {
 }
 
 impl<'a> Json<'a> {
-    /// Build a [`JsonDocument`] from the entire contents.
+    /// Build a [`Json`] from the entire contents.
     pub fn new(data: Cow<'a, str>) -> Result<Self, JsonParsingError<'a>> {
         JsonParser::parse(data)
     }

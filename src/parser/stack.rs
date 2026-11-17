@@ -6,6 +6,7 @@ pub enum JsonParserStack {
     Object {
         start: StrCursor,
         placeholder: usize,
+        pairs: Vec<(usize, usize)>,
     },
     Array {
         start: StrCursor,

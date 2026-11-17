@@ -9,6 +9,9 @@ use crate::{
 pub enum JsonParserState {
     Root,
     Object,
+    ObjectWithKey(usize),
+    ObjectWaitingValue(usize),
+    ObjectSeparator,
     Array,
     ArraySeparator,
     WaitingEof,
@@ -24,6 +27,13 @@ impl JsonParserState {
         match self {
             Self::Root => Self::root(tasks, stack, token),
             Self::Object => Self::object(tasks, stack, token),
+            Self::ObjectWithKey(key_index) => {
+                Self::object_with_key(*key_index, tasks, stack, token)
+            }
+            Self::ObjectWaitingValue(key_index) => {
+                Self::object_waiting_value(*key_index, tasks, stack, token)
+            }
+            Self::ObjectSeparator => Self::object_separator(tasks, stack, token),
             Self::Array => Self::array(tasks, stack, token),
             Self::ArraySeparator => Self::array_separator(tasks, stack, token),
             Self::WaitingEof => unimplemented!(),
@@ -49,6 +59,7 @@ impl JsonParserState {
                 stack.push(JsonParserStack::Object {
                     start,
                     placeholder: position,
+                    pairs: Vec::new(),
                 });
                 Ok(Self::Object)
             }
@@ -97,10 +108,10 @@ impl JsonParserState {
     ) -> Result<Self, JsonParsingErrorType> {
         trace!("'object' consumed {token:?}");
         let Token {
-            start: _,
-            end: _,
+            start,
+            end,
             token_type,
-        } = token;
+        } = *token;
 
         match token_type {
             TokenType::RCurly => {
@@ -109,15 +120,162 @@ impl JsonParserState {
                 if let Some(JsonParserStack::Object {
                     start: _,
                     placeholder,
+                    pairs,
                 }) = last
                 {
-                    tasks[placeholder] = JsonParserTask::Object;
+                    tasks[placeholder] = JsonParserTask::Object { pairs };
                 } else {
                     return Err(JsonParsingErrorType::UnmatchedRCurly);
                 }
 
                 Self::stack_based_next_state(stack)
             }
+            TokenType::String => {
+                let index = tasks.len();
+                tasks.push(JsonParserTask::String { start, end });
+
+                Ok(Self::ObjectWithKey(index))
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    fn object_with_key(
+        key_index: usize,
+        tasks: &mut Vec<JsonParserTask>,
+        stack: &mut Vec<JsonParserStack>,
+        token: &Token,
+    ) -> Result<Self, JsonParsingErrorType> {
+        trace!("'object_with_key' consumed {token:?}");
+        let Token {
+            start: _,
+            end: _,
+            token_type,
+        } = *token;
+
+        match token_type {
+            TokenType::Colon => Ok(Self::ObjectWaitingValue(key_index)),
+            _ => unimplemented!(),
+        }
+    }
+
+    fn object_waiting_value(
+        key_index: usize,
+        tasks: &mut Vec<JsonParserTask>,
+        stack: &mut Vec<JsonParserStack>,
+        token: &Token,
+    ) -> Result<Self, JsonParsingErrorType> {
+        trace!("'object_waiting_value' consumed {token:?}");
+        let Token {
+            start,
+            end,
+            token_type,
+        } = *token;
+
+        match token_type {
+            TokenType::String => {
+                let Some(JsonParserStack::Object {
+                    start: _,
+                    placeholder: _,
+                    pairs,
+                }) = stack.last_mut()
+                else {
+                    todo!();
+                };
+
+                let val_index = tasks.len();
+
+                tasks.push(JsonParserTask::String { start, end });
+                pairs.push((key_index, val_index));
+
+                Ok(Self::ObjectSeparator)
+            }
+            TokenType::Number => {
+                let Some(JsonParserStack::Object {
+                    start: _,
+                    placeholder: _,
+                    pairs,
+                }) = stack.last_mut()
+                else {
+                    todo!();
+                };
+
+                let val_index = tasks.len();
+
+                tasks.push(JsonParserTask::Number { start, end });
+                pairs.push((key_index, val_index));
+
+                Ok(Self::ObjectSeparator)
+            }
+            TokenType::True => {
+                let Some(JsonParserStack::Object {
+                    start: _,
+                    placeholder: _,
+                    pairs,
+                }) = stack.last_mut()
+                else {
+                    todo!();
+                };
+
+                let val_index = tasks.len();
+
+                tasks.push(JsonParserTask::True);
+                pairs.push((key_index, val_index));
+
+                Ok(Self::ObjectSeparator)
+            }
+            TokenType::False => {
+                let Some(JsonParserStack::Object {
+                    start: _,
+                    placeholder: _,
+                    pairs,
+                }) = stack.last_mut()
+                else {
+                    todo!();
+                };
+
+                let val_index = tasks.len();
+
+                tasks.push(JsonParserTask::False);
+                pairs.push((key_index, val_index));
+
+                Ok(Self::ObjectSeparator)
+            }
+            TokenType::Null => {
+                let Some(JsonParserStack::Object {
+                    start: _,
+                    placeholder: _,
+                    pairs,
+                }) = stack.last_mut()
+                else {
+                    todo!();
+                };
+
+                let val_index = tasks.len();
+
+                tasks.push(JsonParserTask::Null);
+                pairs.push((key_index, val_index));
+
+                Ok(Self::ObjectSeparator)
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    fn object_separator(
+        tasks: &mut Vec<JsonParserTask>,
+        stack: &mut Vec<JsonParserStack>,
+        token: &Token,
+    ) -> Result<Self, JsonParsingErrorType> {
+        trace!("'object_separator' consumed {token:?}");
+        let Token {
+            start: _,
+            end: _,
+            token_type,
+        } = *token;
+
+        match token_type {
+            TokenType::Comma => Ok(Self::Object),
             _ => unimplemented!(),
         }
     }

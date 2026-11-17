@@ -127,7 +127,7 @@ impl JsonParser {
                 JsonParserTask::Placeholder => {
                     unreachable!("Placeholder tasks should not reach compilation.");
                 }
-                JsonParserTask::Object => {
+                JsonParserTask::Object { pairs: _ } => {
                     data_cursor[0] = 0;
                     data_cursor = &mut data_cursor[0x18..];
                 }
@@ -206,7 +206,7 @@ impl JsonParser {
 
         for task in tasks {
             let extra = match task {
-                JsonParserTask::Object => 0,
+                JsonParserTask::Object { pairs } => pairs.len() * POINTER_WIDTH * 2,
                 JsonParserTask::Array { values } => values.len() * POINTER_WIDTH,
                 _ => 0,
             };

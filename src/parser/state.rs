@@ -275,6 +275,22 @@ impl JsonParserState {
         } = *token;
 
         match token_type {
+            TokenType::RCurly => {
+                let last = stack.pop();
+
+                if let Some(JsonParserStack::Object {
+                    start: _,
+                    placeholder,
+                    pairs,
+                }) = last
+                {
+                    tasks[placeholder] = JsonParserTask::Object { pairs };
+                } else {
+                    return Err(JsonParsingErrorType::UnmatchedRCurly);
+                }
+
+                Self::stack_based_next_state(stack)
+            }
             TokenType::Comma => Ok(Self::Object),
             _ => unimplemented!(),
         }

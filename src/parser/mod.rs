@@ -7,7 +7,8 @@ use alloc::{borrow::Cow, boxed::Box, vec::Vec};
 use log::*;
 
 use crate::{
-    Json, JsonValue, POINTER_WIDTH,
+    Json, JsonObject, JsonValue, POINTER_WIDTH,
+    object::JsonKeyValue,
     parser::{
         error::JsonParsingErrorType, stack::JsonParserStack, state::JsonParserState,
         tasks::JsonParserTask,
@@ -100,9 +101,10 @@ impl JsonParser {
             json_values_size,
             array_values_count,
             array_values_size,
-            object_pairs_count: _,
+            object_pairs_count,
             object_pairs_size,
         } = Self::calculate_size_of_compiled_json(&tasks);
+
         let mut data = Vec::from_iter(
             [0u8]
                 .iter()
@@ -111,6 +113,7 @@ impl JsonParser {
                 .take(json_values_size + array_values_size + object_pairs_size),
         );
 
+        let mut deferred_objects = Vec::new();
         let mut deferred_arrays = Vec::new();
 
         let json_values_array = unsafe {
@@ -119,8 +122,30 @@ impl JsonParser {
                 json_values_count,
             )
         };
-        Self::compile_tasks(json_data, json_values_array, tasks, &mut deferred_arrays);
+        Self::compile_tasks(
+            json_data,
+            json_values_array,
+            tasks,
+            &mut deferred_objects,
+            &mut deferred_arrays,
+        );
 
+        let json_object_values = unsafe {
+            core::slice::from_raw_parts_mut(
+                data.as_mut_ptr()
+                    .byte_add(json_values_size)
+                    .cast::<JsonKeyValue>(),
+                object_pairs_count,
+            )
+        };
+        Self::compile_objects(json_values_array, json_object_values, deferred_objects);
+
+        let json_values_array = unsafe {
+            core::slice::from_raw_parts_mut(
+                data.as_mut_ptr().cast::<JsonValue>(),
+                json_values_count,
+            )
+        };
         let json_array_values = unsafe {
             core::slice::from_raw_parts_mut(
                 data.as_mut_ptr()
@@ -138,6 +163,7 @@ impl JsonParser {
         json_data: &'a str,
         json_values: &mut [JsonValue<'a>],
         tasks: Vec<JsonParserTask>,
+        deferred_objects: &mut Vec<(usize, Vec<(usize, usize)>)>,
         deferred_arrays: &mut Vec<(usize, Vec<usize>)>,
     ) {
         for (i, (task, json_value)) in tasks.into_iter().zip(json_values).enumerate() {
@@ -145,7 +171,9 @@ impl JsonParser {
                 JsonParserTask::Placeholder => {
                     unreachable!("Placeholder tasks should not reach compilation.");
                 }
-                JsonParserTask::Object { pairs: _ } => {}
+                JsonParserTask::Object { pairs } => {
+                    deferred_objects.push((i, pairs));
+                }
                 JsonParserTask::Array { values } => {
                     deferred_arrays.push((i, values));
                 }
@@ -171,6 +199,47 @@ impl JsonParser {
                     *json_value = JsonValue::Null;
                 }
             }
+        }
+    }
+
+    fn compile_objects<'a>(
+        json_values: &'a mut [JsonValue<'a>],
+        mut object_values: &'a mut [JsonKeyValue<'a>],
+        deferred_objects: Vec<(usize, Vec<(usize, usize)>)>,
+    ) {
+        let len = json_values.len();
+        for (index, deferred_object) in deferred_objects {
+            let (head, tail) = object_values.split_at_mut(deferred_object.len());
+            object_values = tail;
+
+            let mut pairs = deferred_object
+                .iter()
+                .map(|(key_index, value_index)| {
+                    assert!(*key_index < len);
+                    let key_ref =
+                        unsafe { json_values.as_ptr().add(*key_index).as_ref_unchecked() };
+                    let JsonValue::String(key) = key_ref else {
+                        panic!("Object key was not String.");
+                    };
+                    assert!(*value_index < len);
+                    let value =
+                        unsafe { json_values.as_ptr().add(*value_index).as_ref_unchecked() };
+                    JsonKeyValue { key, value }
+                })
+                .collect::<Vec<_>>();
+            pairs.sort_by_cached_key(|JsonKeyValue { key, value: _ }| *key);
+
+            for (dest, pair) in head.iter_mut().zip(pairs) {
+                *dest = pair;
+            }
+
+            assert!(index < len);
+            unsafe {
+                json_values
+                    .as_mut_ptr()
+                    .add(index)
+                    .write(JsonValue::Object(JsonObject { pairs: head }))
+            };
         }
     }
 
@@ -218,7 +287,7 @@ impl JsonParser {
                 JsonParserTask::Object { pairs } => {
                     let len = pairs.len();
                     size.object_pairs_count += len;
-                    size.object_pairs_size += len * POINTER_WIDTH * 2;
+                    size.object_pairs_size += len * POINTER_WIDTH * 3;
                 }
                 JsonParserTask::Array { values } => {
                     let len = values.len();

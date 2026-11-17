@@ -173,6 +173,28 @@ impl JsonParserState {
         } = *token;
 
         match token_type {
+            TokenType::LCurly => {
+                let position = tasks.len();
+                tasks.push(JsonParserTask::Placeholder);
+                stack.push(JsonParserStack::Object {
+                    start,
+                    placeholder: position,
+                    pairs: Vec::new(),
+                });
+                Ok(Self::Object)
+            }
+            TokenType::RCurly => Err(JsonParsingErrorType::UnexpectedRCurly),
+            TokenType::LBracket => {
+                let position = tasks.len();
+                tasks.push(JsonParserTask::Placeholder);
+                stack.push(JsonParserStack::Array {
+                    start,
+                    placeholder: position,
+                    values: Vec::new(),
+                });
+                Ok(Self::Array)
+            }
+            TokenType::RBracket => Err(JsonParsingErrorType::UnexpectedRBracket),
             TokenType::String => {
                 let Some(JsonParserStack::Object {
                     start: _,

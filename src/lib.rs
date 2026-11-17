@@ -21,10 +21,6 @@ const POINTER_WIDTH: usize = 4;
 #[cfg(target_pointer_width = "64")]
 const POINTER_WIDTH: usize = 8;
 
-const FIRST_OFFSET: usize = POINTER_WIDTH;
-const SECOND_OFFSET: usize = FIRST_OFFSET * 2;
-const THIRD_OFFSET: usize = FIRST_OFFSET * 3;
-
 #[derive(PartialEq, Eq)]
 pub struct Json<'a> {
     data: Cow<'a, str>,

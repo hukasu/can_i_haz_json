@@ -505,7 +505,7 @@ impl JsonParserState {
 
     fn stack_based_next_state(stack: &[JsonParserStack]) -> Result<Self, JsonParsingErrorType> {
         match stack.last() {
-            Some(JsonParserStack::Object { .. }) => Ok(Self::Object),
+            Some(JsonParserStack::Object { .. }) => Ok(Self::ObjectSeparator),
             Some(JsonParserStack::Array { .. }) => Ok(Self::ArraySeparator),
             None => Ok(Self::WaitingEof),
         }

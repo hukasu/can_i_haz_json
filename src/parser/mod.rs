@@ -7,7 +7,7 @@ use alloc::{borrow::Cow, boxed::Box, vec::Vec};
 use log::*;
 
 use crate::{
-    FIRST_OFFSET, Json, JsonValue, POINTER_WIDTH, SECOND_OFFSET, THIRD_OFFSET,
+    Json, JsonValue, POINTER_WIDTH,
     parser::{
         error::JsonParsingErrorType, stack::JsonParserStack, state::JsonParserState,
         tasks::JsonParserTask,
@@ -95,125 +95,149 @@ impl JsonParser {
     }
 
     fn compile_json(json_data: &str, tasks: Vec<JsonParserTask>) -> Box<[u8]> {
-        let size = Self::calculate_size_of_compiled_json(&tasks);
-
-        let mut data = Vec::from_iter([0u8].iter().cycle().copied().take(size));
-
-        let json_base = json_data.as_ptr();
-        let data_base = data.as_mut_ptr().cast::<JsonValue>();
+        let CompiledJsonSizes {
+            json_values_count,
+            json_values_size,
+            array_values_count,
+            array_values_size,
+            object_pairs_count: _,
+            object_pairs_size,
+        } = Self::calculate_size_of_compiled_json(&tasks);
+        let mut data = Vec::from_iter(
+            [0u8]
+                .iter()
+                .cycle()
+                .copied()
+                .take(json_values_size + array_values_size + object_pairs_size),
+        );
 
         let mut deferred_arrays = Vec::new();
 
-        let mut data_cursor = data.as_mut_slice();
-        data_cursor = Self::compile_tasks(json_base, data_cursor, tasks, &mut deferred_arrays);
-        data_cursor = Self::compile_arrays(data_base, data_cursor, deferred_arrays);
-        assert!(
-            data_cursor.is_empty(),
-            "There was {} bytes left on compiled json buffer.",
-            data_cursor.len()
-        );
+        let json_values_array = unsafe {
+            core::slice::from_raw_parts_mut(
+                data.as_mut_ptr().cast::<JsonValue>(),
+                json_values_count,
+            )
+        };
+        Self::compile_tasks(json_data, json_values_array, tasks, &mut deferred_arrays);
+
+        let json_array_values = unsafe {
+            core::slice::from_raw_parts_mut(
+                data.as_mut_ptr()
+                    .byte_add(json_values_size + object_pairs_size)
+                    .cast::<&JsonValue>(),
+                array_values_count,
+            )
+        };
+        Self::compile_arrays(json_values_array, json_array_values, deferred_arrays);
 
         data.into_boxed_slice()
     }
 
     fn compile_tasks<'a>(
-        json_base: *const u8,
-        mut data_cursor: &'a mut [u8],
+        json_data: &'a str,
+        json_values: &mut [JsonValue<'a>],
         tasks: Vec<JsonParserTask>,
         deferred_arrays: &mut Vec<(usize, Vec<usize>)>,
-    ) -> &'a mut [u8] {
-        for (i, task) in tasks.into_iter().enumerate() {
+    ) {
+        for (i, (task, json_value)) in tasks.into_iter().zip(json_values).enumerate() {
             match task {
                 JsonParserTask::Placeholder => {
                     unreachable!("Placeholder tasks should not reach compilation.");
                 }
-                JsonParserTask::Object { pairs: _ } => {
-                    data_cursor[0] = 0;
-                    data_cursor = &mut data_cursor[0x18..];
-                }
+                JsonParserTask::Object { pairs: _ } => {}
                 JsonParserTask::Array { values } => {
                     deferred_arrays.push((i, values));
-                    data_cursor = &mut data_cursor[0x18..];
                 }
                 JsonParserTask::String { start, end } => {
                     let len = end.byte - start.byte - 2;
                     let offset = start.byte + 1;
 
-                    data_cursor[0] = 2;
-                    data_cursor[FIRST_OFFSET..SECOND_OFFSET].copy_from_slice(
-                        &unsafe { json_base.byte_add(offset) }.addr().to_ne_bytes(),
-                    );
-                    data_cursor[SECOND_OFFSET..THIRD_OFFSET].copy_from_slice(&len.to_ne_bytes());
-                    data_cursor = &mut data_cursor[0x18..];
+                    *json_value = JsonValue::String(&json_data[offset..(offset + len)]);
                 }
                 JsonParserTask::Number { start, end } => {
                     let len = end.byte - start.byte;
                     let offset = start.byte;
 
-                    data_cursor[0] = 3;
-                    data_cursor[FIRST_OFFSET..SECOND_OFFSET].copy_from_slice(
-                        &unsafe { json_base.byte_add(offset) }.addr().to_ne_bytes(),
-                    );
-                    data_cursor[SECOND_OFFSET..THIRD_OFFSET].copy_from_slice(&len.to_ne_bytes());
-                    data_cursor = &mut data_cursor[0x18..];
+                    *json_value = JsonValue::Number(&json_data[offset..(offset + len)]);
                 }
                 JsonParserTask::True => {
-                    data_cursor[0] = 4;
-                    data_cursor = &mut data_cursor[0x18..];
+                    *json_value = JsonValue::True;
                 }
                 JsonParserTask::False => {
-                    data_cursor[0] = 5;
-                    data_cursor = &mut data_cursor[0x18..];
+                    *json_value = JsonValue::False;
                 }
                 JsonParserTask::Null => {
-                    data_cursor[0] = 6;
-                    data_cursor = &mut data_cursor[0x18..];
+                    *json_value = JsonValue::Null;
                 }
             }
         }
-        data_cursor
     }
 
     fn compile_arrays<'a>(
-        data_base: *mut JsonValue,
-        mut data_cursor: &'a mut [u8],
+        json_values: &'a mut [JsonValue<'a>],
+        mut array_values: &'a mut [&'a JsonValue<'a>],
         deferred_arrays: Vec<(usize, Vec<usize>)>,
-    ) -> &'a mut [u8] {
+    ) {
+        let len = json_values.len();
         for (index, deferred_array) in deferred_arrays {
-            let array_base = data_cursor.as_ptr().cast();
+            let (head, tail) = array_values.split_at_mut(deferred_array.len());
+            array_values = tail;
 
-            unsafe {
-                data_base.add(index).write(JsonValue::Array {
-                    values: core::slice::from_raw_parts(array_base, deferred_array.len()),
-                })
-            };
-
-            for value in deferred_array {
-                unsafe {
-                    data_cursor
-                        .as_mut_ptr()
-                        .cast::<*const JsonValue>()
-                        .write(data_base.add(value))
-                };
-                data_cursor = &mut data_cursor[POINTER_WIDTH..];
+            for (dest, source_index) in head.iter_mut().zip(deferred_array) {
+                assert!(source_index < len);
+                *dest = unsafe { json_values.as_ptr().add(source_index).as_ref_unchecked() };
             }
+
+            assert!(index < len);
+            unsafe {
+                json_values
+                    .as_mut_ptr()
+                    .add(index)
+                    .write(JsonValue::Array { values: head })
+            };
         }
-        data_cursor
     }
 
-    fn calculate_size_of_compiled_json(tasks: &[JsonParserTask]) -> usize {
-        let mut size = tasks.len() * size_of::<JsonValue>();
+    fn calculate_size_of_compiled_json(tasks: &[JsonParserTask]) -> CompiledJsonSizes {
+        let mut size = CompiledJsonSizes {
+            json_values_count: 0,
+            json_values_size: 0,
+            array_values_count: 0,
+            array_values_size: 0,
+            object_pairs_count: 0,
+            object_pairs_size: 0,
+        };
+
+        let len = tasks.len();
+        size.json_values_count = len;
+        size.json_values_size = len * size_of::<JsonValue>();
 
         for task in tasks {
-            let extra = match task {
-                JsonParserTask::Object { pairs } => pairs.len() * POINTER_WIDTH * 2,
-                JsonParserTask::Array { values } => values.len() * POINTER_WIDTH,
-                _ => 0,
+            match task {
+                JsonParserTask::Object { pairs } => {
+                    let len = pairs.len();
+                    size.object_pairs_count += len;
+                    size.object_pairs_size += len * POINTER_WIDTH * 2;
+                }
+                JsonParserTask::Array { values } => {
+                    let len = values.len();
+                    size.array_values_count += len;
+                    size.array_values_size += len * POINTER_WIDTH;
+                }
+                _ => (),
             };
-
-            size += extra
         }
 
         size
     }
+}
+
+struct CompiledJsonSizes {
+    json_values_count: usize,
+    json_values_size: usize,
+    array_values_count: usize,
+    array_values_size: usize,
+    object_pairs_count: usize,
+    object_pairs_size: usize,
 }

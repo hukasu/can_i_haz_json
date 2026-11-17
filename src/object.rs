@@ -3,14 +3,14 @@ use crate::JsonValue;
 #[derive(Debug, PartialEq, Eq)]
 #[repr(C)]
 pub struct JsonObject<'a> {
-    pairs: &'a [JsonKeyValue<'a>],
+    pub(crate) pairs: &'a [JsonKeyValue<'a>],
 }
 
 #[derive(Debug, PartialEq, Eq)]
 #[repr(C)]
 pub struct JsonKeyValue<'a> {
-    key: &'a str,
-    value: &'a JsonValue<'a>,
+    pub(crate) key: &'a str,
+    pub(crate) value: &'a JsonValue<'a>,
 }
 
 impl<'a> JsonObject<'a> {

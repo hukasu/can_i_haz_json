@@ -173,7 +173,17 @@ impl JsonParserState {
 
         match token_type {
             TokenType::Colon => Ok(Self::ObjectWaitingValue(key_index)),
-            _ => unimplemented!(),
+            TokenType::LCurly
+            | TokenType::RCurly
+            | TokenType::LBracket
+            | TokenType::RBracket
+            | TokenType::Comma
+            | TokenType::String
+            | TokenType::Number
+            | TokenType::True
+            | TokenType::False
+            | TokenType::Null => Err(JsonParsingErrorType::ObjectExpectedColon),
+            TokenType::Eof => Self::eof(),
         }
     }
 

@@ -74,7 +74,7 @@ impl Display for TokenizerError {
                 )
             }
             TokenizerErrorType::UnexpectedEof => {
-                write!(f, "Reached end of file while parsing a token.",)
+                write!(f, "Reached end of file while parsing a token.")
             }
         }
     }

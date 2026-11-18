@@ -31,7 +31,7 @@ impl core::ops::Add<char> for StrCursor {
         let new_line = rhs == '\n';
         Self {
             byte: self.byte + rhs.len_utf8(),
-            line: self.line + new_line as usize,
+            line: self.line + usize::from(new_line),
             column: if new_line { 1 } else { self.column + 1 },
         }
     }

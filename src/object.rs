@@ -22,6 +22,7 @@ impl<'a> JsonObject<'a> {
         self.pairs.len() == 0
     }
 
+    #[must_use]
     pub fn find(&self, key: &str) -> Option<&'a JsonValue<'a>> {
         let found = self
             .pairs

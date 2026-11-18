@@ -27,9 +27,7 @@ impl JsonParserState {
         match self {
             Self::Root => Self::root(tasks, stack, token),
             Self::Object(previous_token) => Self::object(*previous_token, tasks, stack, token),
-            Self::ObjectWithKey(key_index) => {
-                Self::object_with_key(*key_index, tasks, stack, token)
-            }
+            Self::ObjectWithKey(key_index) => Self::object_with_key(*key_index, token),
             Self::ObjectWaitingValue(key_index) => {
                 Self::object_waiting_value(*key_index, tasks, stack, token)
             }
@@ -115,7 +113,6 @@ impl JsonParserState {
         } = *token;
 
         match token_type {
-            TokenType::LCurly => Err(JsonParsingErrorType::InvalidObjectKey(token_type)),
             TokenType::RCurly => match previous_token {
                 TokenType::LCurly => {
                     let last = stack.pop();
@@ -131,7 +128,7 @@ impl JsonParserState {
                         return Err(JsonParsingErrorType::UnmatchedRCurly);
                     }
 
-                    Self::stack_based_next_state(stack)
+                    Ok(Self::stack_based_next_state(stack))
                 }
                 TokenType::Comma => Err(JsonParsingErrorType::ObjectTrailingComma),
                 _ => {
@@ -141,7 +138,6 @@ impl JsonParserState {
                     )
                 }
             },
-            TokenType::LBracket => Err(JsonParsingErrorType::InvalidObjectKey(token_type)),
             TokenType::RBracket => Err(JsonParsingErrorType::UnexpectedRBracket),
             TokenType::Comma => Err(JsonParsingErrorType::CommaBeforeObjectKeyValue),
             TokenType::Colon => Err(JsonParsingErrorType::CommaBeforeObjectKey),
@@ -151,19 +147,17 @@ impl JsonParserState {
 
                 Ok(Self::ObjectWithKey(index))
             }
-            TokenType::Number | TokenType::True | TokenType::False | TokenType::Null => {
-                Err(JsonParsingErrorType::InvalidObjectKey(token_type))
-            }
+            TokenType::LCurly
+            | TokenType::LBracket
+            | TokenType::Number
+            | TokenType::True
+            | TokenType::False
+            | TokenType::Null => Err(JsonParsingErrorType::InvalidObjectKey(token_type)),
             TokenType::Eof => Self::eof(),
         }
     }
 
-    fn object_with_key(
-        key_index: usize,
-        tasks: &mut Vec<JsonParserTask>,
-        stack: &mut Vec<JsonParserStack>,
-        token: &Token,
-    ) -> Result<Self, JsonParsingErrorType> {
+    fn object_with_key(key_index: usize, token: &Token) -> Result<Self, JsonParsingErrorType> {
         trace!("'object_with_key' consumed {token:?}");
         let Token {
             start: _,
@@ -315,7 +309,7 @@ impl JsonParserState {
     }
 
     fn object_separator(
-        tasks: &mut Vec<JsonParserTask>,
+        tasks: &mut [JsonParserTask],
         stack: &mut Vec<JsonParserStack>,
         token: &Token,
     ) -> Result<Self, JsonParsingErrorType> {
@@ -341,7 +335,7 @@ impl JsonParserState {
                     return Err(JsonParsingErrorType::UnmatchedRCurly);
                 }
 
-                Self::stack_based_next_state(stack)
+                Ok(Self::stack_based_next_state(stack))
             }
             TokenType::RBracket => Err(JsonParsingErrorType::UnexpectedRBracket),
             TokenType::Comma => Ok(Self::Object(token_type)),
@@ -419,7 +413,7 @@ impl JsonParserState {
                     return Err(JsonParsingErrorType::UnmatchedRBracket);
                 }
 
-                Self::stack_based_next_state(stack)
+                Ok(Self::stack_based_next_state(stack))
             }
             TokenType::Colon => Err(JsonParsingErrorType::UnexpectedColon),
             TokenType::Comma => Err(JsonParsingErrorType::UnexpectedComma),
@@ -503,7 +497,7 @@ impl JsonParserState {
     }
 
     fn array_separator(
-        tasks: &mut Vec<JsonParserTask>,
+        tasks: &mut [JsonParserTask],
         stack: &mut Vec<JsonParserStack>,
         token: &Token,
     ) -> Result<Self, JsonParsingErrorType> {
@@ -530,7 +524,7 @@ impl JsonParserState {
                     return Err(JsonParsingErrorType::UnmatchedRBracket);
                 }
 
-                Self::stack_based_next_state(stack)
+                Ok(Self::stack_based_next_state(stack))
             }
             TokenType::Colon => Err(JsonParsingErrorType::UnexpectedColon),
             TokenType::Comma => Ok(JsonParserState::Array),
@@ -545,11 +539,11 @@ impl JsonParserState {
         }
     }
 
-    fn stack_based_next_state(stack: &[JsonParserStack]) -> Result<Self, JsonParsingErrorType> {
+    fn stack_based_next_state(stack: &[JsonParserStack]) -> Self {
         match stack.last() {
-            Some(JsonParserStack::Object { .. }) => Ok(Self::ObjectSeparator),
-            Some(JsonParserStack::Array { .. }) => Ok(Self::ArraySeparator),
-            None => Ok(Self::WaitingEof),
+            Some(JsonParserStack::Object { .. }) => Self::ObjectSeparator,
+            Some(JsonParserStack::Array { .. }) => Self::ArraySeparator,
+            None => Self::WaitingEof,
         }
     }
 

@@ -4,7 +4,7 @@ mod state;
 mod tasks;
 
 use alloc::{borrow::Cow, boxed::Box, vec::Vec};
-use log::*;
+use log::trace;
 
 use crate::{
     Json, JsonObject, JsonValue, POINTER_WIDTH,
@@ -26,7 +26,7 @@ impl JsonParser {
     ///
     /// Can only take UTF-8 inputs without BOM, convert your data
     /// to UTF-8 before passing it to this method.
-    pub fn parse<'a>(data: Cow<'a, str>) -> Result<Json<'a>, JsonParsingError<'a>> {
+    pub fn parse(data: Cow<'_, str>) -> Result<Json<'_>, JsonParsingError<'_>> {
         trace!("Parsing json.");
         let (tasks, data) = Self::parse_json(data)?;
 
@@ -43,9 +43,9 @@ impl JsonParser {
         }
     }
 
-    fn parse_json<'a>(
-        data: Cow<'a, str>,
-    ) -> Result<(Vec<JsonParserTask>, Cow<'a, str>), JsonParsingError<'a>> {
+    fn parse_json(
+        data: Cow<'_, str>,
+    ) -> Result<(Vec<JsonParserTask>, Cow<'_, str>), JsonParsingError<'_>> {
         let mut tokens = JsonTokenizer::new(data.chars());
         let mut state = JsonParserState::Root;
         let mut stack = alloc::vec![];
@@ -64,7 +64,7 @@ impl JsonParser {
                 }
             };
 
-            trace!("Parsing json token {:?}.", token);
+            trace!("Parsing json token {token:?}.");
             match state.process(&mut tasks, &mut stack, &token) {
                 Ok(new_state) => state = new_state,
                 Err(error_type) => {
@@ -242,7 +242,7 @@ impl JsonParser {
                 json_values
                     .as_mut_ptr()
                     .add(index)
-                    .write(JsonValue::Object(JsonObject { pairs: head }))
+                    .write(JsonValue::Object(JsonObject { pairs: head }));
             };
         }
     }
@@ -267,7 +267,7 @@ impl JsonParser {
                 json_values
                     .as_mut_ptr()
                     .add(index)
-                    .write(JsonValue::Array { values: head })
+                    .write(JsonValue::Array { values: head });
             };
         }
     }
@@ -299,7 +299,7 @@ impl JsonParser {
                     size.array_values_size += len * POINTER_WIDTH;
                 }
                 _ => (),
-            };
+            }
         }
 
         size

@@ -600,15 +600,12 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             return self.unexpected_eof();
         };
 
-        let res = match current_char {
-            'r' => {
-                self.state = Self::seen_tr;
-                Ok(None)
-            }
-            _ => {
-                self.cursor = self.token_start_cursor;
-                self.invalid_token()
-            }
+        let res = if current_char == 'r' {
+            self.state = Self::seen_tr;
+            Ok(None)
+        } else {
+            self.cursor = self.token_start_cursor;
+            self.invalid_token()
         };
         trace!("'seen_t' produced {res:?}");
 
@@ -622,15 +619,12 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             return self.unexpected_eof();
         };
 
-        let res = match current_char {
-            'u' => {
-                self.state = Self::seen_tru;
-                Ok(None)
-            }
-            _ => {
-                self.cursor = self.token_start_cursor;
-                self.invalid_token()
-            }
+        let res = if current_char == 'u' {
+            self.state = Self::seen_tru;
+            Ok(None)
+        } else {
+            self.cursor = self.token_start_cursor;
+            self.invalid_token()
         };
         trace!("'seen_tr' produced {res:?}");
 
@@ -644,19 +638,16 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             return self.unexpected_eof();
         };
 
-        let res = match current_char {
-            'e' => {
-                self.state = Self::start;
-                Ok(Some(Token {
-                    start: self.token_start_cursor,
-                    end: self.cursor + current_char,
-                    token_type: TokenType::True,
-                }))
-            }
-            _ => {
-                self.cursor = self.token_start_cursor;
-                self.invalid_token()
-            }
+        let res = if current_char == 'e' {
+            self.state = Self::start;
+            Ok(Some(Token {
+                start: self.token_start_cursor,
+                end: self.cursor + current_char,
+                token_type: TokenType::True,
+            }))
+        } else {
+            self.cursor = self.token_start_cursor;
+            self.invalid_token()
         };
         trace!("'seen_tru' produced {res:?}");
 
@@ -670,15 +661,12 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             return self.unexpected_eof();
         };
 
-        let res = match current_char {
-            'a' => {
-                self.state = Self::seen_fa;
-                Ok(None)
-            }
-            _ => {
-                self.cursor = self.token_start_cursor;
-                self.invalid_token()
-            }
+        let res = if current_char == 'a' {
+            self.state = Self::seen_fa;
+            Ok(None)
+        } else {
+            self.cursor = self.token_start_cursor;
+            self.invalid_token()
         };
         trace!("'seen_f' produced {res:?}");
 
@@ -692,15 +680,12 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             return self.unexpected_eof();
         };
 
-        let res = match current_char {
-            'l' => {
-                self.state = Self::seen_fal;
-                Ok(None)
-            }
-            _ => {
-                self.cursor = self.token_start_cursor;
-                self.invalid_token()
-            }
+        let res = if current_char == 'l' {
+            self.state = Self::seen_fal;
+            Ok(None)
+        } else {
+            self.cursor = self.token_start_cursor;
+            self.invalid_token()
         };
         trace!("'seen_fa' produced {res:?}");
 
@@ -714,15 +699,12 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             return self.unexpected_eof();
         };
 
-        let res = match current_char {
-            's' => {
-                self.state = Self::seen_fals;
-                Ok(None)
-            }
-            _ => {
-                self.cursor = self.token_start_cursor;
-                self.invalid_token()
-            }
+        let res = if current_char == 's' {
+            self.state = Self::seen_fals;
+            Ok(None)
+        } else {
+            self.cursor = self.token_start_cursor;
+            self.invalid_token()
         };
         trace!("'seen_fal' produced {res:?}");
 
@@ -736,19 +718,16 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             return self.unexpected_eof();
         };
 
-        let res = match current_char {
-            'e' => {
-                self.state = Self::start;
-                Ok(Some(Token {
-                    start: self.token_start_cursor,
-                    end: self.cursor + current_char,
-                    token_type: TokenType::False,
-                }))
-            }
-            _ => {
-                self.cursor = self.token_start_cursor;
-                self.invalid_token()
-            }
+        let res = if current_char == 'e' {
+            self.state = Self::start;
+            Ok(Some(Token {
+                start: self.token_start_cursor,
+                end: self.cursor + current_char,
+                token_type: TokenType::False,
+            }))
+        } else {
+            self.cursor = self.token_start_cursor;
+            self.invalid_token()
         };
         trace!("'seen_fals' produced {res:?}");
 
@@ -762,15 +741,12 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             return self.unexpected_eof();
         };
 
-        let res = match current_char {
-            'u' => {
-                self.state = Self::seen_nu;
-                Ok(None)
-            }
-            _ => {
-                self.cursor = self.token_start_cursor;
-                self.invalid_token()
-            }
+        let res = if current_char == 'u' {
+            self.state = Self::seen_nu;
+            Ok(None)
+        } else {
+            self.cursor = self.token_start_cursor;
+            self.invalid_token()
         };
         trace!("'seen_n' produced {res:?}");
 
@@ -784,15 +760,12 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             return self.unexpected_eof();
         };
 
-        let res = match current_char {
-            'l' => {
-                self.state = Self::seen_nul;
-                Ok(None)
-            }
-            _ => {
-                self.cursor = self.token_start_cursor;
-                self.invalid_token()
-            }
+        let res = if current_char == 'l' {
+            self.state = Self::seen_nul;
+            Ok(None)
+        } else {
+            self.cursor = self.token_start_cursor;
+            self.invalid_token()
         };
         trace!("'seen_nu' produced {res:?}");
 
@@ -806,19 +779,16 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             return self.unexpected_eof();
         };
 
-        let res = match current_char {
-            'l' => {
-                self.state = Self::start;
-                Ok(Some(Token {
-                    start: self.token_start_cursor,
-                    end: self.cursor + current_char,
-                    token_type: TokenType::Null,
-                }))
-            }
-            _ => {
-                self.cursor = self.token_start_cursor;
-                self.invalid_token()
-            }
+        let res = if current_char == 'l' {
+            self.state = Self::start;
+            Ok(Some(Token {
+                start: self.token_start_cursor,
+                end: self.cursor + current_char,
+                token_type: TokenType::Null,
+            }))
+        } else {
+            self.cursor = self.token_start_cursor;
+            self.invalid_token()
         };
         trace!("'seen_nul' produced {res:?}");
 
@@ -827,7 +797,6 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
         res
     }
 
-    #[inline(always)]
     fn eof(&self) -> Token {
         Token {
             start: self.cursor,
@@ -836,7 +805,6 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
         }
     }
 
-    #[inline(always)]
     fn unexpected_eof(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
             start: self.cursor,
@@ -845,7 +813,6 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
         })
     }
 
-    #[inline(always)]
     fn invalid_token(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
             start: self.cursor,
@@ -854,7 +821,6 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
         })
     }
 
-    #[inline(always)]
     fn invalid_character_in_string(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
             start: self.token_start_cursor,
@@ -863,7 +829,6 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
         })
     }
 
-    #[inline(always)]
     fn invalid_escaped_character_in_string(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
             start: self.token_start_cursor,
@@ -872,7 +837,6 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
         })
     }
 
-    #[inline(always)]
     fn no_digit_after_minus(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
             start: self.token_start_cursor,
@@ -881,7 +845,6 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
         })
     }
 
-    #[inline(always)]
     fn invalid_digit_in_number(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
             start: self.token_start_cursor,
@@ -890,7 +853,6 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
         })
     }
 
-    #[inline(always)]
     fn digit_after_zero(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
             start: self.token_start_cursor,
@@ -899,7 +861,6 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
         })
     }
 
-    #[inline(always)]
     fn no_digits_after_fraction(&self) -> Result<Option<Token>, TokenizerError> {
         Err(TokenizerError {
             start: self.token_start_cursor,
@@ -921,9 +882,8 @@ impl<T: Iterator<Item = char>> Iterator for JsonTokenizer<T> {
                 Ok(Some(token)) => {
                     if token.token_type == TokenType::Eof {
                         break None;
-                    } else {
-                        break Some(Ok(token));
                     }
+                    break Some(Ok(token));
                 }
                 Ok(None) => (),
                 Err(err) => break Some(Err(err)),

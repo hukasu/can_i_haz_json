@@ -16,6 +16,7 @@ pub enum TokenizerErrorType {
     InvalidEscapedCharacterInString,
     InvalidDigitInNumber,
     DigitAfterZero,
+    NoDigitAfterMinus,
     NoDigitAfterFraction,
     UnexpectedEof,
 }
@@ -55,6 +56,13 @@ impl Display for TokenizerError {
                 write!(
                     f,
                     "Invalid digit after a zero at position {}:{} (bytes {:?}).",
+                    self.start.line, self.start.column, self.start.byte,
+                )
+            }
+            TokenizerErrorType::NoDigitAfterMinus => {
+                write!(
+                    f,
+                    "No digits after minus at position {}:{} (bytes {:?}).",
                     self.start.line, self.start.column, self.start.byte,
                 )
             }

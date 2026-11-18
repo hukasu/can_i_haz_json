@@ -91,12 +91,17 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                 end: self.cursor + current_char,
                 token_type: TokenType::Colon,
             })),
+            '-' => {
+                self.token_start_cursor = self.cursor;
+                self.state = Self::seen_minus;
+                Ok(None)
+            }
             '0' => {
                 self.token_start_cursor = self.cursor;
                 self.state = Self::seen_zero;
                 Ok(None)
             }
-            '1'..='9' | '-' => {
+            '1'..='9' => {
                 self.token_start_cursor = self.cursor;
                 self.state = Self::number;
                 Ok(None)
@@ -202,6 +207,30 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             self.invalid_escaped_character_in_string()
         };
         trace!("'hex{N}' produced {res:?}");
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn seen_minus(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            self.state = Self::start;
+            return Ok(Some(Token {
+                start: self.token_start_cursor,
+                end: self.cursor,
+                token_type: TokenType::Number,
+            }));
+        };
+
+        let res = match current_char {
+            '0'..='9' => {
+                self.state = Self::number;
+                Ok(None)
+            }
+            _ => self.no_digit_after_minus(),
+        };
+        trace!("'seen_minus' produced {res:?}");
 
         self.cursor += current_char;
 
@@ -693,6 +722,15 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
             start: self.token_start_cursor,
             end: self.cursor,
             error_type: TokenizerErrorType::InvalidEscapedCharacterInString,
+        })
+    }
+
+    #[inline(always)]
+    fn no_digit_after_minus(&self) -> Result<Option<Token>, TokenizerError> {
+        Err(TokenizerError {
+            start: self.token_start_cursor,
+            end: self.cursor,
+            error_type: TokenizerErrorType::NoDigitAfterMinus,
         })
     }
 

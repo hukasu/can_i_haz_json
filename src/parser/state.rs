@@ -154,7 +154,7 @@ impl JsonParserState {
             TokenType::Number | TokenType::True | TokenType::False | TokenType::Null => {
                 Err(JsonParsingErrorType::InvalidObjectKey(token_type))
             }
-            _ => unimplemented!(),
+            TokenType::Eof => Self::eof(),
         }
     }
 

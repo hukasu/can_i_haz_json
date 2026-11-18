@@ -24,7 +24,6 @@ pub enum JsonParsingErrorType {
     UnexpectedRBracket,
     UnmatchedRBracket,
     UnexpectedComma,
-    NoValueAfterArraySeparator,
     NoCommaBetweeArrayValues,
     InvalidObjectKey(TokenType),
     CommaBeforeObjectKey,
@@ -35,6 +34,7 @@ pub enum JsonParsingErrorType {
     DuplicateColon,
     ObjectMissingValue,
     UnclosedObject,
+    ArrayTrailingComma,
     UnclosedArray,
     MultipleRoots,
     EmptyBody,
@@ -61,9 +61,6 @@ impl Display for JsonParsingError<'_> {
                 write!(f, "")
             }
             JsonParsingErrorType::UnexpectedComma => {
-                write!(f, "")
-            }
-            JsonParsingErrorType::NoValueAfterArraySeparator => {
                 write!(f, "")
             }
             JsonParsingErrorType::NoCommaBetweeArrayValues => {
@@ -94,6 +91,9 @@ impl Display for JsonParsingError<'_> {
                 write!(f, "")
             }
             JsonParsingErrorType::UnclosedObject => {
+                write!(f, "")
+            }
+            JsonParsingErrorType::ArrayTrailingComma => {
                 write!(f, "")
             }
             JsonParsingErrorType::UnclosedArray => {

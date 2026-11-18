@@ -413,7 +413,7 @@ impl JsonParserState {
                     if values.is_empty() {
                         tasks[placeholder] = JsonParserTask::Array { values };
                     } else {
-                        return Err(JsonParsingErrorType::NoValueAfterArraySeparator);
+                        return Err(JsonParsingErrorType::ArrayTrailingComma);
                     }
                 } else {
                     return Err(JsonParsingErrorType::UnmatchedRBracket);

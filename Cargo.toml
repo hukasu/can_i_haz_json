@@ -2,7 +2,7 @@
 name = "can_i_haz_json"
 version = "0.1.0"
 edition = "2024"
-categories = ["json"]
+categories = ["encoding", "parser-implementations"]
 keywords = ["json"]
 exclude = ["test_suite"]
 description = "Minimal, no_std, and no dependencies JSON reader"

@@ -421,6 +421,8 @@ impl JsonParserState {
 
                 Self::stack_based_next_state(stack)
             }
+            TokenType::Colon => Err(JsonParsingErrorType::UnexpectedColon),
+            TokenType::Comma => Err(JsonParsingErrorType::UnexpectedComma),
             TokenType::String => {
                 let Some(JsonParserStack::Array {
                     start: _,
@@ -496,8 +498,7 @@ impl JsonParserState {
                 tasks.push(JsonParserTask::Null);
                 Ok(Self::ArraySeparator)
             }
-            TokenType::Comma => Err(JsonParsingErrorType::UnexpectedComma),
-            _ => unimplemented!("{:?}", token),
+            TokenType::Eof => Self::eof(),
         }
     }
 
@@ -514,6 +515,7 @@ impl JsonParserState {
         } = token;
 
         match token_type {
+            TokenType::RCurly => Err(JsonParsingErrorType::UnexpectedRCurly),
             TokenType::RBracket => {
                 let last = stack.pop();
 
@@ -530,6 +532,7 @@ impl JsonParserState {
 
                 Self::stack_based_next_state(stack)
             }
+            TokenType::Colon => Err(JsonParsingErrorType::UnexpectedColon),
             TokenType::Comma => Ok(JsonParserState::Array),
             TokenType::LBracket
             | TokenType::LCurly
@@ -538,7 +541,7 @@ impl JsonParserState {
             | TokenType::True
             | TokenType::False
             | TokenType::Null => Err(JsonParsingErrorType::EmptyBody),
-            _ => unimplemented!("{:?}", token),
+            TokenType::Eof => Self::eof(),
         }
     }
 

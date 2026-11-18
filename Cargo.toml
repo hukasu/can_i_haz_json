@@ -2,6 +2,15 @@
 name = "can_i_haz_json"
 version = "0.1.0"
 edition = "2024"
+categories = ["json"]
+keywords = ["json"]
+exclude = ["test_suite"]
+description = "Minimal, no_std, and no dependencies JSON reader"
+homepage = "https://github.com/hukasu/can_i_haz_json"
+repository = "https://github.com/hukasu/can_i_haz_json"
+documentation = "https://docs.rs/can_i_haz_json"
+license = "MIT"
+license-file = "LICENSE.md"
 
 [dependencies]
 log = "0.4"

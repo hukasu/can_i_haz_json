@@ -2,6 +2,7 @@
 name = "can_i_haz_json_test_macro"
 version = "0.1.0"
 edition = "2024"
+publish = false
 
 [lib]
 proc-macro = true

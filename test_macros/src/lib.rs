@@ -65,7 +65,20 @@ fn {}() {{
     init_logger();
     let test_path = "{}";
     let contents = std::fs::read(test_path).unwrap();
-    let res = ::can_i_haz_json::Json::new(String::from_utf8_lossy(&contents));
+    let string = match contents.as_slice() {{
+        [0xef, 0xbb, 0xbf, ..] => String::from_utf8_lossy(&contents[3..]),
+        [0xfe, 0xff, ..] => std::borrow::Cow::Owned(String::from_utf16be_lossy(&contents[2..])),
+        [0xff, 0xfe, ..] => std::borrow::Cow::Owned(String::from_utf16le_lossy(&contents[2..])),
+        _ => if test_path.contains("utf16BE") {{
+            std::borrow::Cow::Owned(String::from_utf16be_lossy(&contents))
+        }} else if test_path.contains("utf16LE") {{
+            std::borrow::Cow::Owned(String::from_utf16le_lossy(&contents))
+        }} else {{
+            String::from_utf8_lossy(&contents)
+        }}
+        
+    }};
+    let res = ::can_i_haz_json::Json::new(string);
     if {} {{
         assert!(res.is_err(), "{{:?}}", res);
     }} else {{

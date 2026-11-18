@@ -296,6 +296,10 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                     token_type: TokenType::Number,
                 }))
             }
+            'e' | 'E' => {
+                self.state = Self::seen_exponent;
+                Ok(None)
+            }
             '\u{0020}' | '\u{000A}' | '\u{000D}' | '\u{0009}' => Ok(Some(Token {
                 start: self.token_start_cursor,
                 end: self.cursor,
@@ -368,6 +372,10 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                     token_type: TokenType::Number,
                 }))
             }
+            'e' | 'E' => {
+                self.state = Self::seen_exponent;
+                Ok(None)
+            }
             '\u{0020}' | '\u{000A}' | '\u{000D}' | '\u{0009}' => {
                 self.state = Self::start;
                 Ok(Some(Token {
@@ -435,6 +443,36 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                     token_type: TokenType::Number,
                 }))
             }
+            '}' => {
+                self.state = Self::start;
+                self.stored_token = Some(Token {
+                    start: self.cursor,
+                    end: self.cursor + current_char,
+                    token_type: TokenType::RCurly,
+                });
+                Ok(Some(Token {
+                    start: self.token_start_cursor,
+                    end: self.cursor,
+                    token_type: TokenType::Number,
+                }))
+            }
+            ']' => {
+                self.state = Self::start;
+                self.stored_token = Some(Token {
+                    start: self.cursor,
+                    end: self.cursor + current_char,
+                    token_type: TokenType::RBracket,
+                });
+                Ok(Some(Token {
+                    start: self.token_start_cursor,
+                    end: self.cursor,
+                    token_type: TokenType::Number,
+                }))
+            }
+            'e' | 'E' => {
+                self.state = Self::seen_exponent;
+                Ok(None)
+            }
             '\u{0020}' | '\u{000A}' | '\u{000D}' | '\u{0009}' => Ok(Some(Token {
                 start: self.token_start_cursor,
                 end: self.cursor,
@@ -446,6 +484,114 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
         if let Some(stored) = self.stored_token {
             trace!("'fraction' stored {stored:?}");
         }
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn seen_exponent(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            return self.unexpected_eof();
+        };
+
+        let res = match current_char {
+            '+' | '-' => {
+                self.state = Self::seen_exponent_sign;
+                Ok(None)
+            }
+            '0'..='9' => {
+                self.state = Self::exponent_digits;
+                Ok(None)
+            }
+            _ => self.invalid_digit_in_number(),
+        };
+        trace!("'seen_exponent' produced {res:?}");
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn seen_exponent_sign(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            return self.unexpected_eof();
+        };
+
+        let res = match current_char {
+            '0'..='9' => {
+                self.state = Self::exponent_digits;
+                Ok(None)
+            }
+            _ => self.invalid_digit_in_number(),
+        };
+        trace!("'seen_exponent_sign' produced {res:?}");
+
+        self.cursor += current_char;
+
+        res
+    }
+
+    fn exponent_digits(&mut self) -> Result<Option<Token>, TokenizerError> {
+        let Some(current_char) = self.iterator.next() else {
+            return self.unexpected_eof();
+        };
+
+        let res = match current_char {
+            '0'..='9' => Ok(None),
+            ',' => {
+                self.state = Self::start;
+                self.stored_token = Some(Token {
+                    start: self.cursor,
+                    end: self.cursor + current_char,
+                    token_type: TokenType::Comma,
+                });
+                Ok(Some(Token {
+                    start: self.token_start_cursor,
+                    end: self.cursor,
+                    token_type: TokenType::Number,
+                }))
+            }
+            ']' => {
+                self.state = Self::start;
+                self.stored_token = Some(Token {
+                    start: self.cursor,
+                    end: self.cursor + current_char,
+                    token_type: TokenType::RBracket,
+                });
+                Ok(Some(Token {
+                    start: self.token_start_cursor,
+                    end: self.cursor,
+                    token_type: TokenType::Number,
+                }))
+            }
+            '}' => {
+                self.state = Self::start;
+                self.stored_token = Some(Token {
+                    start: self.cursor,
+                    end: self.cursor + current_char,
+                    token_type: TokenType::RCurly,
+                });
+                Ok(Some(Token {
+                    start: self.token_start_cursor,
+                    end: self.cursor,
+                    token_type: TokenType::Number,
+                }))
+            }
+            '\u{0020}' | '\u{000A}' | '\u{000D}' | '\u{0009}' => {
+                self.state = Self::start;
+                Ok(Some(Token {
+                    start: self.token_start_cursor,
+                    end: self.cursor,
+                    token_type: TokenType::Number,
+                }))
+            }
+            _ => {
+                trace!("Invalid digit {} in number.", current_char);
+                self.invalid_digit_in_number()
+            }
+        };
+        trace!("'exponent_digits' produced {res:?}");
 
         self.cursor += current_char;
 

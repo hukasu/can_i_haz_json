@@ -331,7 +331,7 @@ impl JsonParserState {
             | TokenType::True
             | TokenType::False
             | TokenType::Null => Err(JsonParsingErrorType::ObjectExpectedComma),
-            TokenType::Eof => unreachable!("Eof should never be consumed."),
+            TokenType::Eof => Self::eof(),
         }
     }
 
@@ -526,5 +526,10 @@ impl JsonParserState {
             Some(JsonParserStack::Array { .. }) => Ok(Self::ArraySeparator),
             None => Ok(Self::WaitingEof),
         }
+    }
+
+    #[inline(always)]
+    fn eof() -> ! {
+        unreachable!("Eof should never be consumed.")
     }
 }

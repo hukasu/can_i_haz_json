@@ -22,6 +22,10 @@ pub use error::JsonParsingError;
 pub struct JsonParser;
 
 impl JsonParser {
+    /// Parses a JSON file.
+    ///
+    /// Can only take UTF-8 inputs without BOM, convert your data
+    /// to UTF-8 before passing it to this method.
     pub fn parse<'a>(data: Cow<'a, str>) -> Result<Json<'a>, JsonParsingError<'a>> {
         trace!("Parsing json.");
         let (tasks, data) = Self::parse_json(data)?;

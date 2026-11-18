@@ -25,7 +25,7 @@ pub enum JsonParsingErrorType {
     UnmatchedRBracket,
     UnexpectedColon,
     UnexpectedComma,
-    NoCommaBetweeArrayValues,
+    NoCommaBetweenArrayValues,
     InvalidObjectKey(TokenType),
     CommaBeforeObjectKey,
     CommaBeforeObjectKeyValue,
@@ -67,7 +67,7 @@ impl Display for JsonParsingError<'_> {
             JsonParsingErrorType::UnexpectedComma => {
                 write!(f, "")
             }
-            JsonParsingErrorType::NoCommaBetweeArrayValues => {
+            JsonParsingErrorType::NoCommaBetweenArrayValues => {
                 write!(f, "")
             }
             JsonParsingErrorType::InvalidObjectKey(_) => {

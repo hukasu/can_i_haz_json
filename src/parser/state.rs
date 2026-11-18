@@ -114,6 +114,7 @@ impl JsonParserState {
         } = *token;
 
         match token_type {
+            TokenType::LCurly => Err(JsonParsingErrorType::InvalidObjectKey(token_type)),
             TokenType::RCurly => {
                 let last = stack.pop();
 
@@ -130,11 +131,16 @@ impl JsonParserState {
 
                 Self::stack_based_next_state(stack)
             }
+            TokenType::LBracket => Err(JsonParsingErrorType::InvalidObjectKey(token_type)),
+            TokenType::RBracket => Err(JsonParsingErrorType::UnexpectedRBracket),
             TokenType::String => {
                 let index = tasks.len();
                 tasks.push(JsonParserTask::String { start, end });
 
                 Ok(Self::ObjectWithKey(index))
+            }
+            TokenType::Number | TokenType::True | TokenType::False | TokenType::Null => {
+                Err(JsonParsingErrorType::InvalidObjectKey(token_type))
             }
             _ => unimplemented!(),
         }

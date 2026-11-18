@@ -2,7 +2,10 @@ use core::{error::Error, fmt::Display};
 
 use alloc::borrow::Cow;
 
-use crate::{str_cursor::StrCursor, tokenizer::TokenizerErrorType};
+use crate::{
+    str_cursor::StrCursor,
+    tokenizer::{TokenType, TokenizerErrorType},
+};
 
 /// A failure on the parsing of a JSON
 #[derive(Debug)]
@@ -23,6 +26,7 @@ pub enum JsonParsingErrorType {
     UnexpectedComma,
     NoValueAfterArraySeparator,
     NoCommaBetweeArrayValues,
+    InvalidObjectKey(TokenType),
     UnclosedObject,
     UnclosedArray,
     MultipleRoots,
@@ -56,6 +60,9 @@ impl Display for JsonParsingError<'_> {
                 write!(f, "")
             }
             JsonParsingErrorType::NoCommaBetweeArrayValues => {
+                write!(f, "")
+            }
+            JsonParsingErrorType::InvalidObjectKey(_) => {
                 write!(f, "")
             }
             JsonParsingErrorType::UnclosedObject => {

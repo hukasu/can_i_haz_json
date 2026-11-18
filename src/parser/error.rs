@@ -25,6 +25,7 @@ pub enum JsonParsingErrorType {
     NoCommaBetweeArrayValues,
     UnclosedObject,
     UnclosedArray,
+    MultipleRoots,
     EmptyBody,
 }
 
@@ -61,6 +62,9 @@ impl Display for JsonParsingError<'_> {
                 write!(f, "")
             }
             JsonParsingErrorType::UnclosedArray => {
+                write!(f, "")
+            }
+            JsonParsingErrorType::MultipleRoots => {
                 write!(f, "")
             }
             JsonParsingErrorType::EmptyBody => {

@@ -36,7 +36,7 @@ impl JsonParserState {
             Self::ObjectSeparator => Self::object_separator(tasks, stack, token),
             Self::Array => Self::array(tasks, stack, token),
             Self::ArraySeparator => Self::array_separator(tasks, stack, token),
-            Self::WaitingEof => unimplemented!(),
+            Self::WaitingEof => Err(JsonParsingErrorType::MultipleRoots),
         }
     }
 

@@ -30,6 +30,7 @@ pub enum JsonParsingErrorType {
     CommaBeforeObjectKey,
     CommaBeforeObjectKeyValue,
     ObjectExpectedComma,
+    ObjectTrailingComma,
     DuplicateColon,
     ObjectMissingValue,
     UnclosedObject,
@@ -77,6 +78,9 @@ impl Display for JsonParsingError<'_> {
                 write!(f, "")
             }
             JsonParsingErrorType::ObjectExpectedComma => {
+                write!(f, "")
+            }
+            JsonParsingErrorType::ObjectTrailingComma => {
                 write!(f, "")
             }
             JsonParsingErrorType::DuplicateColon => {

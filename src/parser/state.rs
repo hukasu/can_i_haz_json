@@ -8,7 +8,7 @@ use crate::{
 
 pub enum JsonParserState {
     Root,
-    Object,
+    Object(TokenType),
     ObjectWithKey(usize),
     ObjectWaitingValue(usize),
     ObjectSeparator,
@@ -26,7 +26,7 @@ impl JsonParserState {
     ) -> Result<Self, JsonParsingErrorType> {
         match self {
             Self::Root => Self::root(tasks, stack, token),
-            Self::Object => Self::object(tasks, stack, token),
+            Self::Object(previous_token) => Self::object(*previous_token, tasks, stack, token),
             Self::ObjectWithKey(key_index) => {
                 Self::object_with_key(*key_index, tasks, stack, token)
             }
@@ -61,7 +61,7 @@ impl JsonParserState {
                     placeholder: position,
                     pairs: Vec::new(),
                 });
-                Ok(Self::Object)
+                Ok(Self::Object(token_type))
             }
             TokenType::RCurly => Err(JsonParsingErrorType::UnexpectedRCurly),
             TokenType::LBracket => {
@@ -102,6 +102,7 @@ impl JsonParserState {
     }
 
     fn object(
+        previous_token: TokenType,
         tasks: &mut Vec<JsonParserTask>,
         stack: &mut Vec<JsonParserStack>,
         token: &Token,
@@ -115,22 +116,31 @@ impl JsonParserState {
 
         match token_type {
             TokenType::LCurly => Err(JsonParsingErrorType::InvalidObjectKey(token_type)),
-            TokenType::RCurly => {
-                let last = stack.pop();
+            TokenType::RCurly => match previous_token {
+                TokenType::LCurly => {
+                    let last = stack.pop();
 
-                if let Some(JsonParserStack::Object {
-                    start: _,
-                    placeholder,
-                    pairs,
-                }) = last
-                {
-                    tasks[placeholder] = JsonParserTask::Object { pairs };
-                } else {
-                    return Err(JsonParsingErrorType::UnmatchedRCurly);
+                    if let Some(JsonParserStack::Object {
+                        start: _,
+                        placeholder,
+                        pairs,
+                    }) = last
+                    {
+                        tasks[placeholder] = JsonParserTask::Object { pairs };
+                    } else {
+                        return Err(JsonParsingErrorType::UnmatchedRCurly);
+                    }
+
+                    Self::stack_based_next_state(stack)
                 }
-
-                Self::stack_based_next_state(stack)
-            }
+                TokenType::Comma => Err(JsonParsingErrorType::ObjectTrailingComma),
+                _ => {
+                    unreachable!(
+                        "Object state can never be reached from a {:?} token.",
+                        previous_token
+                    )
+                }
+            },
             TokenType::LBracket => Err(JsonParsingErrorType::InvalidObjectKey(token_type)),
             TokenType::RBracket => Err(JsonParsingErrorType::UnexpectedRBracket),
             TokenType::Comma => Err(JsonParsingErrorType::CommaBeforeObjectKeyValue),
@@ -189,7 +199,7 @@ impl JsonParserState {
                     placeholder: position,
                     pairs: Vec::new(),
                 });
-                Ok(Self::Object)
+                Ok(Self::Object(token_type))
             }
             TokenType::RCurly => Err(JsonParsingErrorType::UnexpectedRCurly),
             TokenType::LBracket => {
@@ -324,7 +334,7 @@ impl JsonParserState {
                 Self::stack_based_next_state(stack)
             }
             TokenType::RBracket => Err(JsonParsingErrorType::UnexpectedRBracket),
-            TokenType::Comma => Ok(Self::Object),
+            TokenType::Comma => Ok(Self::Object(token_type)),
             TokenType::LCurly
             | TokenType::LBracket
             | TokenType::Colon
@@ -358,7 +368,7 @@ impl JsonParserState {
                     placeholder: position,
                     pairs: Vec::new(),
                 });
-                Ok(Self::Object)
+                Ok(Self::Object(token_type))
             }
             TokenType::RCurly => Err(JsonParsingErrorType::UnexpectedRCurly),
             TokenType::LBracket => {

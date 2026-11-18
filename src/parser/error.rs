@@ -27,6 +27,8 @@ pub enum JsonParsingErrorType {
     NoValueAfterArraySeparator,
     NoCommaBetweeArrayValues,
     InvalidObjectKey(TokenType),
+    CommaBeforeObjectKey,
+    CommaBeforeObjectKeyValue,
     UnclosedObject,
     UnclosedArray,
     MultipleRoots,
@@ -63,6 +65,12 @@ impl Display for JsonParsingError<'_> {
                 write!(f, "")
             }
             JsonParsingErrorType::InvalidObjectKey(_) => {
+                write!(f, "")
+            }
+            JsonParsingErrorType::CommaBeforeObjectKey => {
+                write!(f, "")
+            }
+            JsonParsingErrorType::CommaBeforeObjectKeyValue => {
                 write!(f, "")
             }
             JsonParsingErrorType::UnclosedObject => {

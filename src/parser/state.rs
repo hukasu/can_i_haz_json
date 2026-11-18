@@ -133,6 +133,8 @@ impl JsonParserState {
             }
             TokenType::LBracket => Err(JsonParsingErrorType::InvalidObjectKey(token_type)),
             TokenType::RBracket => Err(JsonParsingErrorType::UnexpectedRBracket),
+            TokenType::Comma => Err(JsonParsingErrorType::CommaBeforeObjectKeyValue),
+            TokenType::Colon => Err(JsonParsingErrorType::CommaBeforeObjectKey),
             TokenType::String => {
                 let index = tasks.len();
                 tasks.push(JsonParserTask::String { start, end });

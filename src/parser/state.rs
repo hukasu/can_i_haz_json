@@ -321,8 +321,17 @@ impl JsonParserState {
 
                 Self::stack_based_next_state(stack)
             }
+            TokenType::RBracket => Err(JsonParsingErrorType::UnexpectedRBracket),
             TokenType::Comma => Ok(Self::Object),
-            _ => unimplemented!(),
+            TokenType::LCurly
+            | TokenType::LBracket
+            | TokenType::Colon
+            | TokenType::String
+            | TokenType::Number
+            | TokenType::True
+            | TokenType::False
+            | TokenType::Null => Err(JsonParsingErrorType::ObjectExpectedComma),
+            TokenType::Eof => unreachable!("Eof should never be consumed."),
         }
     }
 

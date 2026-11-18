@@ -586,10 +586,7 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
                     token_type: TokenType::Number,
                 }))
             }
-            _ => {
-                trace!("Invalid digit {} in number.", current_char);
-                self.invalid_digit_in_number()
-            }
+            _ => self.invalid_digit_in_number(),
         };
         trace!("'exponent_digits' produced {res:?}");
 

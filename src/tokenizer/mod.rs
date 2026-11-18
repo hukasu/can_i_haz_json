@@ -224,7 +224,11 @@ impl<T: Iterator<Item = char>> JsonTokenizer<T> {
         };
 
         let res = match current_char {
-            '0'..='9' => {
+            '0' => {
+                self.state = Self::seen_zero;
+                Ok(None)
+            }
+            '1'..='9' => {
                 self.state = Self::number;
                 Ok(None)
             }

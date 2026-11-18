@@ -203,6 +203,8 @@ impl JsonParserState {
                 Ok(Self::Array)
             }
             TokenType::RBracket => Err(JsonParsingErrorType::UnexpectedRBracket),
+            TokenType::Colon => Err(JsonParsingErrorType::DuplicateColon),
+            TokenType::Comma => Err(JsonParsingErrorType::ObjectMissingValue),
             TokenType::String => {
                 let Some(JsonParserStack::Object {
                     start: _,
@@ -288,7 +290,7 @@ impl JsonParserState {
 
                 Ok(Self::ObjectSeparator)
             }
-            _ => unimplemented!(),
+            TokenType::Eof => Self::eof(),
         }
     }
 

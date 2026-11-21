@@ -1,0 +1,7 @@
+[files]
+extend-exclude = ["test_suite/*"]
+
+[default.extend-identifiers]
+# States in the tokenizer
+seen_tru = "seen_tru"
+seen_fals = "seen_fals"
